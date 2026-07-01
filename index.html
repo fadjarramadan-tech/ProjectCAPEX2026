@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Konfirmasi Data CAPEX</title>
+    <style>
+        :root {
+            --primary-color: #0056a3;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --bg-color: #f4f6f9;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px;
+        }
+
+        .container { max-width: 1500px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 20px; }
+        h1 { color: var(--primary-color); margin-bottom: 5px; }
+
+        .filter-container {
+            background: white; padding: 15px 20px; border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px;
+            display: flex; align-items: center; gap: 15px; flex-wrap: wrap;
+        }
+        .filter-group { display: flex; align-items: center; gap: 10px; }
+        .filter-container label { font-weight: bold; font-size: 14px; color: #495057; }
+        .filter-container select, .filter-container input { padding: 8px 16px; border-radius: 4px; border: 1px solid #ced4da; font-size: 14px; outline: none; }
+        .filter-container input { min-width: 250px; }
+
+        .table-responsive { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { background-color: #f8f9fa; color: #495057; font-weight: 600; padding: 12px; border-bottom: 2px solid #dee2e6; font-size: 14px; }
+        td { padding: 12px; border-bottom: 1px solid #dee2e6; font-size: 14px; vertical-align: middle; }
+        tr:hover { background-color: #f1f3f5; }
+        tr.confirmed { background-color: #d4edda !important; }
+        tr.rejected { background-color: #f8d7da !important; }
+
+        .actions { display: flex; gap: 5px; }
+        button { padding: 6px 12px; border: none; border-radius: 4px; font-weight: bold; font-size: 12px; cursor: pointer; }
+        .btn-confirm { background-color: var(--success-color); color: white; }
+        .btn-reject { background-color: var(--danger-color); color: white; }
+        .btn-secondary { background-color: #6c757d; color: white; }
+
+        /* --- STYLING MODAL POPUP --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6); display: none; justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal-box {
+            background: white; width: 100%; max-width: 750px; border-radius: 8px; padding: 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15); max-height: 92vh; overflow-y: auto;
+        }
+        .modal-header { border-bottom: 1px solid #dee2e6; padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h2 { margin: 0; color: var(--primary-color); font-size: 18px; }
+
+        .form-group-row {
+            display: grid; grid-template-columns: 1fr 140px; gap: 15px;
+            align-items: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px dashed #eee;
+        }
+        .field-info label { font-weight: 600; display: block; font-size: 13px; color: #333; }
+        .field-info span { font-size: 13px; color: #555; }
+
+        .form-group-row select { padding: 5px; border-radius: 4px; border: 1px solid #ced4da; font-size: 12px; }
+        .revision-box { grid-column: 1 / span 2; background: #fff3cd; padding: 10px; border-radius: 4px; margin-top: -3px; display: none; }
+        .revision-box label { font-size: 11px; font-weight: bold; color: #856404; display: block; margin-bottom: 4px;}
+        .revision-box input, .revision-box select, .revision-box textarea { width: 100%; padding: 6px; border: 1px solid #ffeeba; border-radius: 4px; box-sizing: border-box; font-size: 13px; }
+
+        /* Breakdown Table Bulanan */
+        .breakdown-title { font-weight: bold; font-size: 13px; margin: 15px 0 5px 0; color: var(--primary-color); border-top: 1px solid #dee2e6; padding-top: 10px; display: flex; justify-content: space-between; }
+        .breakdown-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #e9ecef; }
+        .month-input label { font-size: 11px; font-weight: 600; color: #495057; display: block; margin-bottom: 2px; }
+        .month-input input { width: 100%; padding: 5px; border: 1px solid #ced4da; border-radius: 4px; box-sizing: border-box; font-size: 12px; text-align: right; }
+
+        .modal-footer { margin-top: 20px; border-top: 1px solid #dee2e6; padding-top: 12px; display: flex; justify-content: flex-end; gap: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Sistem Konfirmasi Data CAPEX</h1>
+        <p>Monitoring & Konfirmasi Sheet: <strong>LIST_PROJECT</strong></p>
+    </header>
+
+    <div class="filter-container" id="filter-wrapper" style="display: none;">
+        <div class="filter-group">
+            <label for="filter-wilayah">Filter Wilayah:</label>
+            <select id="filter-wilayah" onchange="filterData()">
+                <option value="ALL">-- Semua Wilayah --</option>
+            </select>
+        </div>
+        <div class="filter-group" style="margin-left: auto;">
+            <label for="search-project">Cari Nama Project:</label>
+            <input type="text" id="search-project" placeholder="Ketik nama project..." onkeyup="filterData()">
+        </div>
+    </div>
+
+    <div id="loading" class="loading">Mengambil dan menyinkronkan data dari Google Sheets...</div>
+    <div id="error" class="error-msg" style="display: none;"></div>
+    
+    <div class="table-responsive" id="table-wrapper" style="display: none;">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 50px; text-align: center;">No</th>
+                    <th>Wilayah (A)</th>
+                    <th>Entitas (B)</th>
+                    <th>Operating Unit (C)</th>
+                    <th>Project Number (D)</th>
+                    <th>Nama Project (E)</th>
+                    <th style="text-align: right;">Alokasi (ENP) (F)</th>
+                    <th>Remarks (H)</th>
+                    <th style="width: 140px; text-align: center;">Aksi Konfirmasi</th>
+                </tr>
+            </thead>
+            <tbody id="data-rows"></tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal-overlay" id="confirmation-modal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>Konfirmasi & Validasi Item Project</h2>
+            <span id="budget-counter" style="font-weight: bold; font-size: 13px; color: #555;">Sisa ENP: 0</span>
+        </div>
+        <form id="modal-form" onsubmit="submitModalForm(event)">
+            <input type="hidden" id="modal-project-number-id">
+            <input type="hidden" id="modal-row-display-index">
+
+            <div class="form-group-row">
+                <div class="field-info"><label>Wilayah (A)</label><span id="text-wilayah">-</span></div>
+                <div style="font-size: 11px; color: #999; text-align: right;">🔒 Locked</div>
+            </div>
+            <div class="form-group-row">
+                <div class="field-info"><label>Project Number (D)</label><span id="text-proj-num">-</span></div>
+                <div style="font-size: 11px; color: #999; text-align: right;">🔒 Locked</div>
+            </div>
+            <div class="form-group-row">
+                <div class="field-info"><label>Nama Project (E)</label><span id="text-proj-name">-</span></div>
+                <div style="font-size: 11px; color: #999; text-align: right;">🔒 Locked</div>
+            </div>
+
+            <div class="form-group-row">
+                <div class="field-info"><label>Entitas (B) & Operating Unit (C)</label><span id="text-entitas-ou">-</span></div>
+                <select id="status-outlet" onchange="toggleRevisionField('outlet')">
+                    <option value="Sesuai">Sesuai</option>
+                    <option value="Tidak Sesuai">Tidak Sesuai</option>
+                </select>
+                <div class="revision-box" id="rev-box-outlet">
+                    <label>Pilih Kode Entitas & Operating Unit Baru:</label>
+                    <select id="input-rev-outlet"></select>
+                </div>
+            </div>
+
+            <div class="form-group-row">
+                <div class="field-info"><label>Alokasi (ENP) (F)</label><span id="text-alokasi">-</span></div>
+                <select id="status-alokasi" onchange="toggleRevisionField('alokasi')">
+                    <option value="Sesuai">Sesuai</option>
+                    <option value="Tidak Sesuai">Tidak Sesuai</option>
+                </select>
+                <div class="revision-box" id="rev-box-alokasi">
+                    <label>Masukkan Nilai Alokasi Penyesuaian:</label>
+                    <input type="text" id="input-rev-alokasi" onkeyup="formatThousandInput(this); updateBudgetCounter();" style="margin-bottom:8px;">
+                    <label style="color:#b51d1d;">⚠️ Wajib Upload Surat Usul Perubahan ENP ke Drive (Maks 1MB):</label>
+                    <input type="file" id="input-file-enp" accept=".pdf,.jpg,.png,.jpeg">
+                </div>
+            </div>
+
+            <div class="form-group-row">
+                <div class="field-info"><label>Remarks (H)</label><span id="text-remarks">-</span></div>
+                <select id="status-remarks" onchange="toggleRevisionField('remarks')">
+                    <option value="Sesuai">Sesuai</option>
+                    <option value="Tidak Sesuai">Tidak Sesuai</option>
+                </select>
+                <div class="revision-box" id="rev-box-remarks">
+                    <label>Masukkan Keterangan Penyesuaian:</label>
+                    <textarea id="input-rev-remarks" rows="2"></textarea>
+                </div>
+            </div>
+
+            <div class="breakdown-title">
+                <span>Rencana Realisasi Tahun 2026 & Breakdown Bulanan</span>
+                <span id="total-breakdown-label" style="color:#0056a3;">Total: 0</span>
+            </div>
+            <div class="breakdown-grid">
+                <div class="month-input"><label>Januari</label><input type="text" id="m-jan" value="0" onkeyup="formatThousandInput(this); updateBudgetCounter();"></div>
+                <div class="month-input"><label>Februari</label><input type="text" id="m-feb" value="0" onkeyup="formatThousandInput(this); updateBudgetCounter();"></div>
+                <div class="month-input"><label>Maret</label><input type="text" id="m-mar" value="0" onkeyup="formatThousandInput(this); updateBudgetCounter();"></div>
+                <div class="month-input"><label>April</label><input type="text" id="m-apr" value="0" onkeyup="formatThousandInput(this); updateBudgetCounter();"></div>
+                <div class="month-input"><label>Mei</label><input type="text" id="m-mei" value="0" onkeyup="formatThousandInput(this); updateBudgetCounter();"></div>
+                <div class="month-input"><label>Juni</label><input type="text" id="m-jun" value="0" onkeyup="formatThousandInput(this); updateBudgetCounter();"></div>
+                <div class="month-input"><label>Juli</label><input type="text" id="m-jul" value="0" onkeyup="formatThousandInput(this); updateBudgetCounter();"></div>
+                <div class="month-input"><label>Agustus</label><input type="text" id="m-aug" value="0" onkeyup="formatThousandInput(this); updateBudgetCounter();"></div>
+                <div class="month-input"><label>September</label><input type="text" id="m-sep" value="0" onkeyup="formatThousandInput(this); updateBudgetCounter();"></div>
+                <div class="month-input"><label>Oktober</label><input type="text" id="m-oct" value="0" onkeyup="formatThousandInput(this); updateBudgetCounter();"></div>
+                <div class="month-input"><label>November</label><input type="text" id="m-nov" value="0" onkeyup="formatThousandInput(this); updateBudgetCounter();"></div>
+                <div class="month-input"><label>Desember</label><input type="text" id="m-dec" value="0" onkeyup="formatThousandInput(this); updateBudgetCounter();"></div>
+            </div>
+
+            <div style="margin-top: 12px;">
+                <label style="font-weight: bold; font-size: 13px; display: block; margin-bottom: 4px;">User Konfirmator:</label>
+                <input type="text" id="input-user-konfirmator" placeholder="Nama / Jabatan Pengisi" style="width:100%; padding:6px; border:1px solid #ced4da; border-radius:4px;" required>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeModal()">Batal</button>
+                <button type="submit" id="btn-submit-modal" class="btn-confirm">Simpan Hasil Validasi</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const API_URL_BASE = "https://script.google.com/macros/s/AKfycbxUiW2az6M5e1pDLeMsJACgCDlsT-1GaU0venEG2s-tBE-p8KGqdL0hgc14OlI0rqLT/exec";
+    
+    let globalProjects = [];
+    let globalOutlets = [];
+    let currentFilteredList = []; // Menyimpan array state filter aktif saat ini
+
+    function formatRibuan(angka) {
+        if (!angka || angka === '-') return '0';
+        let num = angka.toString().replace(/[^0-9]/g, '');
+        return num ? parseInt(num).toLocaleString('id-ID') : '0';
+    }
+
+    function cleanNumber(stringNumber) {
+        if (!stringNumber) return 0;
+        let clean = stringNumber.toString().replace(/[^0-9]/g, '');
+        return clean ? parseFloat(clean) : 0;
+    }
+
+    function formatThousandInput(input) {
+        let cursor = input.selectionStart;
+        let oldLength = input.value.length;
+        input.value = formatRibuan(input.value);
+        let newLength = input.value.length;
+        input.selectionStart = cursor + (newLength - oldLength);
+    }
+
+    async function fetchData() {
+        const loadingEl = document.getElementById('loading');
+        const errorEl = document.getElementById('error');
+        try {
+            const response = await fetch(`${API_URL_BASE}?action=get_data`);
+            if (!response.ok) throw new Error('Gagal memuat respon server.');
+            const result = await response.json();
+            
+            loadingEl.style.display = 'none';
+            globalProjects = result.projects || [];
+            globalOutlets = result.outlets || [];
+            currentFilteredList = [...globalProjects];
+
+            document.getElementById('filter-wrapper').style.display = 'flex';
+            document.getElementById('table-wrapper').style.display = 'block';
+            
+            populateWilayahFilter(globalProjects);
+            renderTable(currentFilteredList);
+        } catch (error) {
+            loadingEl.style.display = 'none';
+            errorEl.style.display = 'block';
+            errorEl.innerText = `Error Sinkronisasi: ${error.message}`;
+        }
+    }
+
+    function populateWilayahFilter(data) {
+        const filterSelect = document.getElementById('filter-wilayah');
+        const wilayahSet = new Set();
+        data.forEach(item => { if (item.Wilayah && item.Wilayah !== '-') wilayahSet.add(item.Wilayah); });
+        
+        filterSelect.innerHTML = '<option value="ALL">-- Semua Wilayah --</option>';
+        Array.from(wilayahSet).sort().forEach(w => {
+            const opt = document.createElement('option'); opt.value = w; opt.textContent = w;
+            filterSelect.appendChild(opt);
+        });
+    }
+
+    function renderTable(data) {
+        const container = document.getElementById('data-rows');
+        container.innerHTML = '';
+        data.forEach((item, index) => {
+            const tr = document.createElement('tr');
+            tr.id = `row-${index}`;
+            tr.innerHTML = `
+                <td style="text-align: center; font-weight: bold; color: #666;">${index + 1}</td>
+                <td>${item.Wilayah}</td>
+                <td>${item.Entitas}</td>
+                <td>${item.Operating_Unit}</td>
+                <td><strong>${item.Project_Number}</strong></td>
+                <td>${item.Nama_Project}</td>
+                <td style="text-align: right; font-weight: bold; color: #0056a3;">${formatRibuan(item.Alokasi_ENP)}</td>
+                <td>${item.Remarks}</td>
+                <td>
+                    <div class="actions" id="actions-${index}">
+                        <button class="btn-reject" onclick="handleReject(${index})">Tolak</button>
+                        <button class="btn-confirm" onclick="openConfirmationModal('${item.Project_Number}', ${index})">Konfirmasi</button>
+                    </div>
+                    <div id="status-${index}" style="display:none;"></div>
+                </td>
+            `;
+            container.appendChild(tr);
+        });
+    }
+
+    // Perbaikan Poin 2: Pencarian Berdasarkan ID Project Number agar data Modal tidak tertukar
+    function openConfirmationModal(projectNumber, displayIndex) {
+        const item = globalProjects.find(p => p.Project_Number === projectNumber);
+        if (!item) return;
+
+        document.getElementById('modal-project-number-id').value = projectNumber;
+        document.getElementById('modal-row-display-index').value = displayIndex;
+        
+        document.getElementById('text-wilayah').innerText = item.Wilayah;
+        document.getElementById('text-proj-num').innerText = item.Project_Number;
+        document.getElementById('text-proj-name').innerText = item.Nama_Project;
+        document.getElementById('text-entitas-ou').innerText = `${item.Entitas} / ${item.Operating_Unit}`;
+        document.getElementById('text-alokasi').innerText = formatRibuan(item.Alokasi_ENP);
+        document.getElementById('text-remarks').innerText = item.Remarks;
+
+        const outletSelect = document.getElementById('input-rev-outlet');
+        outletSelect.innerHTML = '';
+        const filteredOutlets = globalOutlets.filter(o => o.Wilayah === item.Wilayah);
+        if(filteredOutlets.length === 0) {
+            outletSelect.innerHTML = `<option value="${item.Entitas}|${item.Operating_Unit}">${item.Entitas} - ${item.Operating_Unit}</option>`;
+        } else {
+            filteredOutlets.forEach(o => {
+                const opt = document.createElement('option');
+                opt.value = `${o.Entitas}|${o.Operating_Unit}`;
+                opt.textContent = `[${o.Entitas}] ${o.Operating_Unit}`;
+                outletSelect.appendChild(opt);
+            });
+        }
+
+        ['outlet', 'alokasi', 'remarks'].forEach(f => {
+            document.getElementById(`status-${f}`).value = 'Sesuai';
+            document.getElementById(`rev-box-${f}`).style.display = 'none';
+            document.getElementById(`input-rev-${f}`).value = '';
+        });
+        document.getElementById('input-file-enp').value = '';
+        document.getElementById('input-file-enp').required = false;
+        document.getElementById('input-user-konfirmator').value = '';
+        
+        const months = ['jan','feb','mar','apr','mei','jun','jul','aug','sep','oct','nov','dec'];
+        months.forEach(m => document.getElementById(`m-${m}`).value = 0);
+
+        document.getElementById('confirmation-modal').style.display = 'flex';
+        updateBudgetCounter();
+    }
+
+    function closeModal() { document.getElementById('confirmation-modal').style.display = 'none'; }
+
+    function toggleRevisionField(fieldName) {
+        const statusValue = document.getElementById(`status-${fieldName}`).value;
+        const revBox = document.getElementById(`rev-box-${fieldName}`);
+        const inputField = document.getElementById(`input-rev-${fieldName}`);
+
+        if (statusValue === 'Tidak Sesuai') {
+            revBox.style.display = 'block';
+            if (fieldName === 'alokasi') {
+                document.getElementById('input-file-enp').required = true;
+                const projNumId = document.getElementById('modal-project-number-id').value;
+                const item = globalProjects.find(p => p.Project_Number === projNumId);
+                inputField.value = formatRibuan(item.Alokasi_ENP);
+            }
+            if (fieldName === 'remarks') {
+                const projNumId = document.getElementById('modal-project-number-id').value;
+                const item = globalProjects.find(p => p.Project_Number === projNumId);
+                inputField.value = item.Remarks;
+            }
+        } else {
+            revBox.style.display = 'none';
+            if (fieldName === 'alokasi') document.getElementById('input-file-enp').required = false;
+        }
+        updateBudgetCounter();
+    }
+
+    function updateBudgetCounter() {
+        const projNumId = document.getElementById('modal-project-number-id').value;
+        if(projNumId === '') return;
+        
+        const item = globalProjects.find(p => p.Project_Number === projNumId);
+        let limitENP = item ? cleanNumber(item.Alokasi_ENP) : 0;
+        
+        if (document.getElementById('status-alokasi').value === 'Tidak Sesuai') {
+            limitENP = cleanNumber(document.getElementById('input-rev-alokasi').value);
+        }
+
+        const months = ['jan','feb','mar','apr','mei','jun','jul','aug','sep','oct','nov(--nov)','dec'];
+        let totalBreakdown = 0;
+        ['jan','feb','mar','apr','mei','jun','jul','aug','sep','oct','nov','dec'].forEach(m => { 
+            totalBreakdown += cleanNumber(document.getElementById(`m-${m}`).value); 
+        });
+
+        let sisa = limitENP - totalBreakdown;
+        const counterEl = document.getElementById('budget-counter');
+        const labelTotal = document.getElementById('total-breakdown-label');
+        const submitBtn = document.getElementById('btn-submit-modal');
+
+        labelTotal.innerText = `Total: ${formatRibuan(totalBreakdown)}`;
+
+        if (sisa < 0) {
+            counterEl.innerHTML = `Sisa ENP: <span style="color:var(--danger-color); font-weight:bold;">Over Budget (${formatRibuan(Math.abs(sisa))})</span>`;
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Error: Over Budget ENP!";
+        } else {
+            counterEl.innerHTML = `Sisa ENP: <span style="color:var(--success-color); font-weight:bold;">${formatRibuan(sisa)}</span>`;
+            submitBtn.disabled = false;
+            submitBtn.innerText = "Simpan Hasil Validasi";
+        }
+    }
+
+    async function submitModalForm(event) {
+        event.preventDefault();
+        const projNumId = document.getElementById('modal-project-number-id').value;
+        const displayIndex = document.getElementById('modal-row-display-index').value;
+        const item = globalProjects.find(p => p.Project_Number === projNumId);
+        const submitBtn = document.getElementById('btn-submit-modal');
+        
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Sedang Mengunggah & Menyimpan...";
+
+        const months = ['jan','feb','mar','apr','mei','jun','jul','aug','sep','oct','nov','dec'];
+        let totalBreakdown = 0;
+        let monthlyData = {};
+        months.forEach(m => {
+            let val = cleanNumber(document.getElementById(`m-${m}`).value);
+            totalBreakdown += val;
+            monthlyData[m] = val;
+        });
+
+        let finalEntitas = item.Entitas;
+        let finalOU = item.Operating_Unit;
+        if(document.getElementById('status-outlet').value === 'Tidak Sesuai') {
+            const splitOutlet = document.getElementById('input-rev-outlet').value.split('|');
+            finalEntitas = splitOutlet[0]; finalOU = splitOutlet[1];
+        }
+
+        const payload = {
+            Wil: item.Wilayah, Entitas: finalEntitas, OperatingUnit: finalOU,
+            ProjectNumber: item.Project_Number, NamaProject: item.Nama_Project,
+            AlokasiStatus: document.getElementById('status-alokasi').value,
+            AlokasiValue: document.getElementById('status-alokasi').value === 'Tidak Sesuai' ? cleanNumber(document.getElementById('input-rev-alokasi').value) : cleanNumber(item.Alokasi_ENP),
+            RemarksStatus: document.getElementById('status-remarks').value,
+            RemarksValue: document.getElementById('status-remarks').value === 'Tidak Sesuai' ? document.getElementById('input-rev-remarks').value : item.Remarks,
+            TotalRealisasi2026: totalBreakdown, BreakdownBulanan: monthlyData,
+            UserKonfirmator: document.getElementById('input-user-konfirmator').value,
+            fileName: "", fileData: "", fileMimeType: ""
+        };
+
+        const fileInput = document.getElementById('input-file-enp');
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            
+            // Pengaman kompresi: Jika file di atas 1.5MB, ingatkan wilayah
+            if (file.size > 1500000) {
+                alert("File terlalu besar! Maksimal ukuran lampiran surat adalah 1.5 MB agar tidak memicu Failed to fetch.");
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Simpan Hasil Validasi";
+                return;
+            }
+
+            payload.fileName = file.name;
+            payload.fileMimeType = file.type;
+            
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = async function () {
+                payload.fileData = reader.result;
+                await sendToBackendBypassCors(payload, displayIndex);
+            };
+        } else {
+            await sendToBackendBypassCors(payload, displayIndex);
+        }
+    }
+
+    // Perbaikan Poin 1: Optimasi Pengiriman Data Ringkas Mengatasi Failed To Fetch URL Length Limit
+    async function sendToBackendBypassCors(payload, displayIndex) {
+        try {
+            var encodedPayload = encodeURIComponent(JSON.stringify(payload));
+            var fullUrl = `${API_URL_BASE}?action=submit_validation&payload=${encodedPayload}`;
+
+            const response = await fetch(fullUrl, { method: "GET" });
+            const res = await response.json();
+            
+            if (res.success) {
+                closeModal();
+                document.getElementById(`actions-${displayIndex}`).style.display = 'none';
+                const statusDiv = document.getElementById(`status-${displayIndex}`);
+                statusDiv.style.display = 'block';
+                document.getElementById(`row-${displayIndex}`).className = 'confirmed';
+                statusDiv.innerHTML = `<span class="status-badge text-confirmed">✓ Berhasil Validasi</span>`;
+            } else {
+                alert("Gagal menyimpan: " + res.message);
+            }
+        } catch (e) {
+            // Deteksi spesifik jika payload URL kepanjangan
+            if(e.message.includes('fetch')) {
+                alert("Gagal Kirim: Lampiran file terlalu besar. Gunakan file PDF/Gambar berukuran kecil di bawah 1MB.");
+            } else {
+                alert("Error submit data: " + e.message);
+            }
+        } finally {
+            document.getElementById('btn-submit-modal').disabled = false;
+            document.getElementById('btn-submit-modal').innerText = "Simpan Hasil Validasi";
+        }
+    }
+
+    function handleReject(index) {
+        document.getElementById(`actions-${index}`).style.display = 'none';
+        const statusDiv = document.getElementById(`status-${index}`);
+        statusDiv.style.display = 'block';
+        document.getElementById(`row-${index}`).className = 'rejected';
+        statusDiv.innerHTML = `<span class="status-badge text-rejected">✗ Ditolak Wilayah</span>`;
+    }
+
+    function filterData() {
+        const selectVal = document.getElementById('filter-wilayah').value;
+        const searchVal = document.getElementById('search-project').value.toLowerCase().trim();
+
+        currentFilteredList = globalProjects.filter(p => {
+            const matchWilayah = (selectVal === 'ALL' || p.Wilayah === selectVal);
+            const matchSearch = (p.Nama_Project && p.Nama_Project.toLowerCase().includes(searchVal));
+            return matchWilayah && matchSearch;
+        });
+        
+        renderTable(currentFilteredList);
+    }
+
+    window.addEventListener('DOMContentLoaded', fetchData);
+</script>
+</body>
+</html>
