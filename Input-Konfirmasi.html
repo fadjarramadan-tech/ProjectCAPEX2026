@@ -634,7 +634,7 @@
             if (document.getElementById('status-outlet').value === "Tidak Sesuai") { document.getElementById('input-rev-outlet').value = `${detail.entitas}|${detail.operatingUnit}`; }
             document.getElementById('status-alokasi').value = detail.alokasiStatus; toggleRevisionField('alokasi'); document.getElementById('input-rev-alokasi').value = formatRibuan(detail.alokasiValue);
             if (detail.attachment && detail.attachment !== "-") {
-                document.getElementById('view-attachment-link').style.display = "block"; document.getElementById('view-attachment-link').innerHTML = `<a href="${detail.attachment}" target="_blank" style="color:var(--primary-blue); font-weight:bold; text-decoration:underline;">🔗 Buka Lampiran Surat Perubahan ENP Resmi (Google Drive)</a>`;
+                document.getElementById('view-attachment-link').style.display = "block"; document.getElementById('view-attachment-link').innerHTML = `<a href="${detail.attachment}" target="_blank" style="color:var(--primary-blue); font-weight:bold; text-decoration:underline;">🔗 Buka Lampiran Surat Resmi Usul Perubahan ENP</a>`;
             } else { document.getElementById('view-attachment-link').style.display = "none"; }
             document.getElementById('status-remarks').value = detail.remarksStatus; toggleRevisionField('remarks'); document.getElementById('input-rev-remarks').value = detail.remarksValue;
             const months = ['jan','feb','mar','apr','mei','jun','jul','aug','sep','oct','nov','dec'];
