@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BNI CAPEX - Rincian Penyesuaian Anggaran</title>
+    <style>
+        :root {
+            --bni-teal: #006677;
+            --bni-teal-dark: #004d5a;
+            --bni-orange: #E57200;
+            --bg-canvas: #f0f4f5;
+            --text-dark: #222222;
+            --danger-red: #dc3545;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-canvas); padding: 25px; margin: 0; }
+        .container { max-width: 1800px; margin: 0 auto; }
+        header {
+            background: linear-gradient(135deg, var(--bni-teal), var(--bni-teal-dark));
+            color: white; padding: 20px; border-radius: 12px; margin-bottom: 25px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        header h1 { margin: 0; font-size: 22px; }
+        .btn-back { background: transparent; color: white; padding: 8px 16px; border: 1px solid white; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; font-size: 13px; }
+        .btn-back:hover { background: white; color: var(--bni-teal-dark); }
+        .table-container { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { background-color: #f4f8f9; color: var(--bni-teal-dark); font-weight: 700; padding: 12px 8px; border-bottom: 2px solid var(--bni-teal); border-right: 1px solid #e1e8ed; text-align: center; }
+        td { padding: 10px 8px; border-bottom: 1px solid #eef2f4; border-right: 1px solid #eef2f4; }
+        .bg-changed { background-color: #fff8e1; color: #b78103; font-weight: 600; }
+        .link-drive { color: #007bff; font-weight: bold; text-decoration: none; }
+        .link-drive:hover { text-decoration: underline; }
+        .loading { text-align: center; padding: 20px; font-weight: bold; color: var(--bni-teal); }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <div>
+            <h1>Log Audit Proyek Pasca Penyesuaian / Deviasi</h1>
+            <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.9;">Daftar proyek yang mengalami perubahan Plafon ENP atau pergeseran Entitas Kerja</p>
+        </div>
+        <a href="javascript:window.history.back()" class="btn-back">⬅️ Kembali</a>
+    </header>
+
+    <div class="table-container">
+        <div id="loading" class="loading">Memproses data deviasi anggaran...</div>
+        <table id="revisi-table" style="display: none;">
+            <thead>
+                <tr>
+                    <th rowspan="2" style="width: 50px;">No</th>
+                    <th rowspan="2">Project Number</th>
+                    <th rowspan="2" style="width: 250px;">Nama Deskripsi Project</th>
+                    <th rowspan="2">Wilayah</th>
+                    <th colspan="2">Unit Kerja / Entitas</th>
+                    <th colspan="2">Plafon ENP (Rp)</th>
+                    <th rowspan="2">Evidence Dokumen</th>
+                    <th rowspan="2">User Konfirmator</th>
+                </tr>
+                <tr>
+                    <th>Semula (Master)</th>
+                    <th>Menjadi (Usulan)</th>
+                    <th>Semula (Master)</th>
+                    <th>Menjadi (Usulan)</th>
+                </tr>
+            </thead>
+            <tbody id="revisi-rows"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const API_URL_BASE = "https://script.google.com/macros/s/AKfycbxfvE-fRf3VQy-ViYHQ9ybXI6NWLxFxFOwW-Efnuay_mgJIiGGLjZ_mBBs_sl8b4SPl/exec";
+
+    function formatRibuan(angka) {
+        if (!angka) return '0';
+        return Math.round(angka).toLocaleString('id-ID');
+    }
+
+    async function loadRevisiData() {
+        try {
+            const response = await fetch(`${API_URL_BASE}?action=get_data`);
+            const result = await response.json();
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('revisi-table').style.display = 'table';
+
+            const projects = result.projects || [];
+            const details = result.confirmedDetails || {};
+            const tbody = document.getElementById('revisi-rows');
+            tbody.innerHTML = '';
+
+            let idx = 1;
+
+            projects.forEach(p => {
+                const det = details[p.Project_Number];
+                if (p.IsConfirmedState && det) {
+                    let enpSemula = parseFloat(p.Alokasi_ENP || 0);
+                    let enpUsulan = parseFloat(det.alokasiValue || 0);
+                    
+                    let entitasSemula = p.Unit_Kerja || p.Operating_Unit || "-"; 
+                    let entitasUsulan = `[${det.entitas}] ${det.operatingUnit}`;
+
+                    // Deteksi Deviasi: Jika status penyesuaian ATAU nilai ENP berubah ATAU entitas bergeser
+                    let isEnpChanged = enpSemula !== enpUsulan;
+                    let isStatusPenyesuaian = det.alokasiStatus !== 'Sesuai';
+
+                    if (isEnpChanged || isStatusPenyesuaian) {
+                        let tr = document.createElement('tr');
+                        let fileLink = (det.attachment && det.attachment !== "-") ? `<a href="${det.attachment}" target="_blank" class="link-drive">📄 Berkas</a>` : `-`;
+
+                        tr.innerHTML = `
+                            <td style="text-align:center;">${idx++}</td>
+                            <td><strong>${p.Project_Number}</strong></td>
+                            <td>${p.Nama_Project}</td>
+                            <td>${p.Wilayah}</td>
+                            <td>${entitasSemula}</td>
+                            <td class="${isStatusPenyesuaian ? 'bg-changed' : ''}">${entitasUsulan}</td>
+                            <td style="text-align:right;">${formatRibuan(enpSemula)}</td>
+                            <td style="text-align:right;" class="${isEnpChanged ? 'bg-changed' : ''}">${formatRibuan(enpUsulan)}</td>
+                            <td style="text-align:center;">${fileLink}</td>
+                            <td><b>${det.user || 'System'}</b></td>
+                        `;
+                        tbody.appendChild(tr);
+                    }
+                }
+            });
+
+            if (idx === 1) {
+                tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:20px; font-weight:bold; color:#888;">Tidak ada data proyek yang mengalami penyesuaian.</td></tr>`;
+            }
+        } catch(e) {
+            document.getElementById('loading').innerText = "Gagal memproses log audit: " + e.message;
+            document.getElementById('loading').style.color = "red";
+        }
+    }
+    document.addEventListener('DOMContentLoaded', loadRevisiData);
+</script>
+</body>
+</html>
