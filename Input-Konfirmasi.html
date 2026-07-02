@@ -35,7 +35,7 @@
 
         .nav-menu-box { display: flex; align-items: center; gap: 12px; }
         .btn-nav-summary {
-            background-color: var(--bni-orange); color: white; padding: 12px 20px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 13.5px; box-shadow: 0 4px 10px rgba(229, 114, 0, 0.25); transition: all 0.2s;
+            background-color: var(--bni-orange); color: white; padding: 12px 20px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 13.5px; box-shadow: 0 4px 10px rgba(229, 114, 0, 0.25); transition: all 0.2s; white-space: nowrap;
         }
         .btn-nav-summary:hover { background-color: var(--bni-orange-hover); transform: translateY(-1px); }
 
@@ -136,6 +136,7 @@
         </div>
         
         <div class="nav-menu-box">
+            <a href="Rincian-PenyesuaianProject.html" class="btn-nav-summary" style="background-color: var(--bni-teal-dark); border: 1px solid rgba(255,255,255,0.3);">📋 Rincian Penyesuaian</a>
             <a href="summary.html" class="btn-nav-summary">📊 Buka Dashboard Summary</a>
         </div>
         
@@ -171,7 +172,7 @@
             <input type="text" id="search-project" placeholder="Masukkan nomor / nama proyek..." onkeyup="filterData()">
         </div>
         
-        <button id="btn-restore-panel-id" class="btn-restore-panel" onclick="openRestoreModal()">🗑️ Lihat Proyek Ditolak</button>
+        <button id="btn-restore-panel-id" class="btn-restore-panel" onclick="openRestoreModal()">🗑️ Lihat Usulan Proyek Didrop</button>
     </div>
 
     <div id="loading" class="loading">Memuat sirkulasi basis data dari Google Sheets, mohon tunggu...</div>
@@ -298,7 +299,7 @@
 <div class="modal-overlay" id="restore-modal">
     <div class="modal-box modal-large">
         <div class="modal-header">
-            <h2>Arsip Log Usulan Proyek Terhapus (Ditolak)</h2>
+            <h2>Arsip Log Usulan Proyek Terhapus (Didrop)</h2>
             <button class="btn-reject" onclick="closeRestoreModal()" style="padding: 5px 10px;">❌ Tutup</button>
         </div>
         <div class="table-wrapper-scrollable" style="max-height: 400px; margin-bottom: 15px;">
@@ -359,7 +360,6 @@
         
         loadingEl.style.display = 'none';
         
-        // Bersihkan data awal dari Project Number bernilai 0 atau blank
         const rawProjects = result.projects || [];
         globalProjects = rawProjects.filter(p => {
             if (!p.Project_Number) return false;
@@ -371,11 +371,9 @@
         globalConfirmedDetails = result.confirmedDetails || {};
         globalRejectedProjects = result.rejectedProjects || [];
         
-        // RE-MAPPING SISTEM LOCK KUNCI SECARA ABSOLUT
         globalLockedWilayah = {};
         if (result.lockedWilayah) {
             for (let key in result.lockedWilayah) {
-                // Paksa key nama wilayah dari server menjadi UPPERCASE dan bersih dari spasi hantu
                 globalLockedWilayah[key.toString().trim().toUpperCase()] = result.lockedWilayah[key];
             }
         }
@@ -454,8 +452,6 @@
     function filterData() {
         const wilayahVal = document.getElementById('filter-wilayah').value;
         const unitKerjaVal = document.getElementById('filter-unit-kerja').value;
-        
-        // FIX: Penyederhanaan ID Selector agar tidak memicu pembatalan silent javascript error
         const searchInput = document.getElementById('search-project');
         const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : "";
 
@@ -481,18 +477,12 @@
     data.forEach((item, index) => {
         const tr = document.createElement('tr');
         let rowClass = item.IsConfirmedState === true ? 'confirmed' : '';
-        
-        // 1. AMBIL NAMA WILAYAH DARI BARIS DATA (Contoh: "W05")
         const rowWilayahRaw = item.Wilayah ? item.Wilayah.toString().trim().toUpperCase() : "";
         
-        // 2. DETEKSI KUNCI ABSOLUT (Mengecek langsung ke dalam Object Lock Server)
         let isProjectLocked = false;
-        
-        // Cek langsung dengan key wilayah (Sangat Presisi)
         if (globalLockedWilayah[rowWilayahRaw] === "LOCKED") {
             isProjectLocked = true;
         } else {
-            // Cek cadangan jika ada variasi nama wilayah (Pencocokan Substring)
             for (let lockedKey in globalLockedWilayah) {
                 const cleanLockKey = lockedKey.toString().trim().toUpperCase();
                 if (globalLockedWilayah[lockedKey] === "LOCKED") {
@@ -505,16 +495,13 @@
         }
         
         let actionHtml = '';
-        
         if (isProjectLocked) {
-            // JIKA WILAYAH TERKUNCI: Ganti kolom aksi dengan tombol Tunggal, Matikan Klik (Disabled & Pointer Events None)
             actionHtml = `
                 <div class="actions" style="width: 100%;">
                     <button class="btn-view" style="width:100%; background-color: #6c757d; color: #ffffff; cursor: not-allowed; opacity: 0.65; pointer-events: none;" disabled onclick="openConfirmationModal('${item.Project_Number}', ${index}, true)">🔒 View Detail (Locked)</button>
                 </div>
             `;
         } else {
-            // JIKA WILAYAH BELUM DIKUNCI: Menu kontrol normal aktif
             actionHtml = item.IsConfirmedState === true ? `
                 <div class="actions">
                     <button class="btn-view" onclick="openConfirmationModal('${item.Project_Number}', ${index}, true)">View</button>
@@ -575,11 +562,10 @@
     function openRestoreModal() {
         const tbody = document.getElementById('rejected-data-rows'); tbody.innerHTML = '';
         if(globalRejectedProjects.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; font-weight:bold; color:#888; padding:30px;">Kosong: Tidak ada log usulan proyek yang ditolak saat ini.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; font-weight:bold; color:#888; padding:30px;">Kosong: Tidak ada log usulan proyek yang didrop saat ini.</td></tr>`;
         } else {
             globalRejectedProjects.forEach((item, index) => {
                 const tr = document.createElement('tr');
-                
                 const currentWilayah = item.Wilayah ? item.Wilayah.toString().trim().toUpperCase() : "";
                 const isAreaLocked = (globalLockedWilayah[currentWilayah] === "LOCKED");
                 const btnRestoreHtml = isAreaLocked ? 
