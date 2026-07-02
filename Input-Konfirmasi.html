@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BNI CAPEX - Sistem Konfirmasi Data Proyek</title>
+    <title>BNI CAPEX - Sistem Konfirmasi Data Project</title>
     <style>
         :root {
             --bni-teal: #006677;
@@ -132,7 +132,7 @@
     <header>
         <div class="header-title">
             <h1>Konfirmasi Project CAPEX 2026 (Excl. Perabotan Non Otomasi)</h1>
-            <p>Monitoring Usulan <strong>Revisi RBB 2026</strong></p>
+            <p>Monitoring Usulan <strong> Anggaran Investasi - Revisi RBB 2026</strong></p>
         </div>
         
         <div class="nav-menu-box">
@@ -168,11 +168,11 @@
         </div>
 
         <div class="filter-group" style="margin-left: auto;">
-            <label for="search-project">Pencarian Proyek:</label>
-            <input type="text" id="search-project" placeholder="Masukkan nomor / nama proyek..." onkeyup="filterData()">
+            <label for="search-project">Pencarian Project:</label>
+            <input type="text" id="search-project" placeholder="Masukkan nomor / nama project..." onkeyup="filterData()">
         </div>
         
-        <button id="btn-restore-panel-id" class="btn-restore-panel" onclick="openRestoreModal()">🗑️ Lihat Usulan Proyek Didrop</button>
+        <button id="btn-restore-panel-id" class="btn-restore-panel" onclick="openRestoreModal()">🗑️ Lihat Usulan Project Didrop</button>
     </div>
 
     <div id="loading" class="loading">Memuat sirkulasi basis data dari Google Sheets, mohon tunggu...</div>
@@ -299,7 +299,7 @@
 <div class="modal-overlay" id="restore-modal">
     <div class="modal-box modal-large">
         <div class="modal-header">
-            <h2>Arsip Log Usulan Proyek Terhapus (Didrop)</h2>
+            <h2>Arsip Log Usulan Project Terhapus (Didrop)</h2>
             <button class="btn-reject" onclick="closeRestoreModal()" style="padding: 5px 10px;">❌ Tutup</button>
         </div>
         <div class="table-wrapper-scrollable" style="max-height: 400px; margin-bottom: 15px;">
@@ -319,7 +319,7 @@
                 <tbody id="rejected-data-rows"></tbody>
             </table>
         </div>
-        <p style="font-size: 11.5px; color: #666; margin: 0;">* Klik tombol <strong>Pulihkan Proyek</strong> untuk mengembalikan project ke papan utama monitor list aktif.</p>
+        <p style="font-size: 11.5px; color: #666; margin: 0;">* Klik tombol <strong>Pulihkan Project</strong> untuk mengembalikan project ke papan utama monitor list aktif.</p>
     </div>
 </div>
 
@@ -395,7 +395,7 @@
         const confirmedFiltered = filteredData.filter(p => p.IsConfirmedState === true).length;
         const percentage = totalFiltered > 0 ? Math.round((confirmedFiltered / totalFiltered) * 100) : 0;
         
-        document.getElementById('progress-text').innerText = `Progres Pengisian Konfirmasi: ${confirmedFiltered} dari ${totalFiltered} Proyek Terkonfirmasi (${percentage}%)`;
+        document.getElementById('progress-text').innerText = `Progres Pengisian Konfirmasi: ${confirmedFiltered} dari ${totalFiltered} Project Terkonfirmasi (${percentage}%)`;
         document.getElementById('progress-fill-bar').style.width = `${percentage}%`;
     }
 
@@ -533,7 +533,7 @@
 }
 
     async function handleDeleteConfirmation(projectNumber) {
-        if(!confirm(`Apakah Anda yakin ingin menghapus LOG HASIL KONFIRMASI untuk proyek ${projectNumber}?\n\nData proyek ini akan dikembalikan ke status awal belum dikonfirmasi.`)) return;
+        if(!confirm(`Apakah Anda yakin ingin menghapus LOG HASIL KONFIRMASI untuk project ${projectNumber}?\n\nData project ini akan dikembalikan ke status awal belum dikonfirmasi.`)) return;
 
         document.getElementById('loading').style.display = 'block';
         document.getElementById('loading').innerText = "Sedang menghapus log konfirmasi anggaran...";
@@ -547,7 +547,7 @@
             const txt = await res.text();
 
             if (txt.includes("SUCCESS_DELETE_CONFIRM")) {
-                alert(`Log konfirmasi untuk proyek ${projectNumber} berhasil dihapus.`);
+                alert(`Log konfirmasi untuk project ${projectNumber} berhasil dihapus.`);
                 fetchData(); 
             } else {
                 alert("Gagal menghapus log konfirmasi: " + txt);
@@ -562,7 +562,7 @@
     function openRestoreModal() {
         const tbody = document.getElementById('rejected-data-rows'); tbody.innerHTML = '';
         if(globalRejectedProjects.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; font-weight:bold; color:#888; padding:30px;">Kosong: Tidak ada log usulan proyek yang didrop saat ini.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; font-weight:bold; color:#888; padding:30px;">Kosong: Tidak ada log usulan project yang didrop saat ini.</td></tr>`;
         } else {
             globalRejectedProjects.forEach((item, index) => {
                 const tr = document.createElement('tr');
@@ -593,12 +593,12 @@
     async function executeProjectRestore(projectNumber) {
         if(!confirm(`Apakah Anda yakin ingin memulihkan Project Number ${projectNumber} kembali ke monitor utama?`)) return;
         closeRestoreModal();
-        document.getElementById('loading').style.display = 'block'; document.getElementById('loading').innerText = "Sedang memproses pemulihan data proyek...";
+        document.getElementById('loading').style.display = 'block'; document.getElementById('loading').innerText = "Sedang memproses pemulihan data project...";
         try {
             let formData = new URLSearchParams(); formData.append('action', 'restore_project'); formData.append('ProjectNumber', projectNumber);
             const res = await fetch(API_URL_BASE, { method: 'POST', body: formData });
             const txt = await res.text();
-            if (txt.includes("SUCCESS_RESTORE")) { alert(`Sukses! Proyek ${projectNumber} berhasil dikembalikan ke list aktif.`); fetchData(); } else { alert("Proses Restore Gagal: " + txt); }
+            if (txt.includes("SUCCESS_RESTORE")) { alert(`Sukses! Project ${projectNumber} berhasil dikembalikan ke list aktif.`); fetchData(); } else { alert("Proses Restore Gagal: " + txt); }
         } catch(e) { alert("Koneksi Transmisi Gagal: " + e.message); } finally { document.getElementById('loading').style.display = 'none'; }
     }
 
