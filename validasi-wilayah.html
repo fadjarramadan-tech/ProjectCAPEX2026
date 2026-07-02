@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BNI CAPEX - Lembar Validasi Eksekutif</title>
+    <title>BNI CAPEX - Lembar Validasi Executive</title>
     <style>
         :root {
             --bni-teal: #006677;
@@ -29,9 +29,14 @@
         .summary-item strong { font-size: 16px; color: var(--bni-teal-dark); }
 
         .disclaimer-box { background-color: #fff3e0; border-left: 5px solid var(--bni-orange); padding: 15px; border-radius: 4px; margin-bottom: 25px; font-size: 12.5px; line-height: 1.6; color: #795548; }
-        .btn-submit { background-color: var(--success-green); color: white; width: 100%; padding: 14px; border: none; border-radius: 6px; font-weight: bold; font-size: 15px; cursor: pointer; transition: background 0.2s; }
+        
+        /* Gaya Tombol */
+        .btn-submit { background-color: var(--success-green); color: white; padding: 14px; border: none; border-radius: 6px; font-weight: bold; font-size: 15px; cursor: pointer; transition: background 0.2s; }
         .btn-submit:hover { background-color: #218838; }
         .btn-submit:disabled { background-color: #c8cbcf; cursor: not-allowed; }
+        
+        .btn-navigasi { background-color: transparent; color: var(--bni-teal); padding: 14px; border: 2px solid var(--bni-teal); border-radius: 6px; font-weight: bold; font-size: 15px; cursor: pointer; transition: all 0.2s; text-align: center; }
+        .btn-navigasi:hover { background-color: var(--bni-teal); color: white; }
         
         .status-badge-locked { background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 6px; text-align: center; font-weight: bold; margin-bottom: 20px; display: none; }
     </style>
@@ -47,7 +52,7 @@
             <label for="val-wilayah">Pilih Wilayah Kerja Anda:</label>
             <select id="val-wilayah" onchange="fetchDataWilayah()">
                 <option value="">-- Pilih Wilayah --</option>
-                </select>
+            </select>
         </div>
 
         <div class="summary-card">
@@ -70,10 +75,13 @@
 
             <div class="disclaimer-box">
                 <strong>📌 DISCLAIMER & VALIDASI DATA:</strong><br>
-                Dengan menekan tombol submit di bawah ini, kami menyatakan bahwa seluruh rincian usulan anggaran Revisi RBB 2026 untuk Kantor Wilayah yang dipilih di atas telah lengkap, sesuai, dan diverifikasi dengan benar. Kami memahami setelah konfirmasi ini dikirim, data tersebut akan dikunci dan <strong>tidak dapat diubah atau dihapus kembali tanpa persetujuan Divisi NSD.</strong>.
+                Dengan menekan tombol submit di bawah ini, kami menyatakan bahwa seluruh rincian usulan anggaran Revisi RBB 2026 untuk Kantor Wilayah yang dipilih di atas telah lengkap, sesuai, dan diverifikasi dengan benar. Kami memahami setelah konfirmasi ini dikirim, data tersebut akan dikunci dan <strong>tidak dapat diubah atau dihapus kembali tanpa persetujuan Divisi NSD.</strong>
             </div>
 
-            <button type="submit" id="btn-trigger" class="btn-submit" disabled>🔒 Kirim Pernyataan Validasi & Kunci Data</button>
+            <div style="display: flex; gap: 15px; margin-top: 20px;">
+                <button type="submit" id="btn-trigger" class="btn-submit" style="flex: 2;" disabled>🔒 Kirim Pernyataan Validasi & Kunci Data</button>
+                <button type="button" id="btn-navigasi" class="btn-navigasi" style="flex: 1;" onclick="navigateToSummary()">📋 Lihat Rincian Project</button>
+            </div>
         </form>
     </div>
 </div>
@@ -105,7 +113,6 @@
         const selectedWilayah = document.getElementById('val-wilayah').value;
         if(!selectedWilayah) return resetSummary();
 
-        // Cek status kunci wilayah (diasumsikan server menyimpan daftar status lock wilayah)
         const isLocked = rawServerResponse.lockedWilayah && rawServerResponse.lockedWilayah[selectedWilayah];
         if (isLocked) {
             document.getElementById('lock-banner').style.display = 'block';
@@ -129,7 +136,7 @@
                 if(d) {
                     enpUsulan += parseFloat(d.alokasiValue || 0);
                     rbbRevisi += parseFloat(d.totalRealisasi || 0);
-                    realisasiTotal += parseFloat(d.totalRealisasi || 0); // Akumulasi s.d Des
+                    realisasiTotal += parseFloat(d.totalRealisasi || 0);
                 }
             }
         });
@@ -150,54 +157,60 @@
         document.getElementById('btn-trigger').disabled = true;
     }
 
-    async function executeValidation(e) {
-    e.preventDefault();
-    if(!confirm("Apakah Anda yakin ingin MEMVALIDASI dan MENGUNCI data untuk wilayah ini? Tindakan ini tidak dapat dibatalkan.")) return;
-
-    document.getElementById('btn-trigger').innerText = "Sedang Mengunci Database...";
-    document.getElementById('btn-trigger').disabled = true;
-
-    const payload = {
-        wilayah: document.getElementById('val-wilayah').value,
-        nama: document.getElementById('val-nama').value,
-        npp: document.getElementById('val-npp').value,
-        jabatan: document.getElementById('val-jabatan').value,
-        action: "lock_wilayah" // Memastikan parameter action ikut terkirim di dalam body JSON
-    };
-
-    try {
-        const response = await fetch(`${API_URL_BASE}`, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
-        
-        // Ambil respon sebagai teks biasa terlebih dahulu untuk menghindari crash token 'E'
-        const textResponse = await response.text(); 
-        
-        // Cek jika respon dari server diawali dengan kata ERROR
-        if (textResponse.startsWith("ERROR:")) {
-            alert(textResponse); // Tampilkan pesan error langsung dari server
-            document.getElementById('btn-trigger').innerText = "🔒 Kirim Pernyataan Validasi & Kunci Data";
-            document.getElementById('btn-trigger').disabled = false;
-            return;
-        }
-
-        // Jika bukan error teks biasa, konversi ke objek JSON
-        const res = JSON.parse(textResponse);
-        if(res.status === "success") {
-            alert(`Data Wilayah ${payload.wilayah} Berhasil divalidasi dan Dikunci secara Permanen!`);
-            window.location.reload();
+    function navigateToSummary() {
+        const selectedWilayah = document.getElementById('val-wilayah').value;
+        if (selectedWilayah) {
+            window.location.href = `summary.html?wilayah=${encodeURIComponent(selectedWilayah)}`;
         } else {
-            alert("Gagal mengunci: " + (res.message || "Terjadi kesalahan"));
+            window.location.href = 'summary.html';
+        }
+    }
+
+    async function executeValidation(e) {
+        e.preventDefault();
+        if(!confirm("Apakah Anda yakin ingin MEMVALIDASI dan MENGUNCI data untuk wilayah ini? Tindakan ini tidak dapat dibatalkan.")) return;
+
+        document.getElementById('btn-trigger').innerText = "Sedang Mengunci Database...";
+        document.getElementById('btn-trigger').disabled = true;
+
+        const payload = {
+            wilayah: document.getElementById('val-wilayah').value,
+            nama: document.getElementById('val-nama').value,
+            npp: document.getElementById('val-npp').value,
+            jabatan: document.getElementById('val-jabatan').value,
+            action: "lock_wilayah"
+        };
+
+        try {
+            const response = await fetch(`${API_URL_BASE}`, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+            
+            const textResponse = await response.text(); 
+            
+            if (textResponse.startsWith("ERROR:")) {
+                alert(textResponse);
+                document.getElementById('btn-trigger').innerText = "🔒 Kirim Pernyataan Validasi & Kunci Data";
+                document.getElementById('btn-trigger').disabled = false;
+                return;
+            }
+
+            const res = JSON.parse(textResponse);
+            if(res.status === "success") {
+                alert(`Data Wilayah ${payload.wilayah} Berhasil divalidasi dan Dikunci secara Permanen!`);
+                window.location.reload();
+            } else {
+                alert("Gagal mengunci: " + (res.message || "Terjadi kesalahan"));
+                document.getElementById('btn-trigger').innerText = "🔒 Kirim Pernyataan Validasi & Kunci Data";
+                document.getElementById('btn-trigger').disabled = false;
+            }
+        } catch(err) {
+            alert("Terjadi Error System: " + err.message);
             document.getElementById('btn-trigger').innerText = "🔒 Kirim Pernyataan Validasi & Kunci Data";
             document.getElementById('btn-trigger').disabled = false;
         }
-    } catch(err) {
-        alert("Terjadi Error System: " + err.message);
-        document.getElementById('btn-trigger').innerText = "🔒 Kirim Pernyataan Validasi & Kunci Data";
-        document.getElementById('btn-trigger').disabled = false;
     }
-}
 
     document.addEventListener('DOMContentLoaded', initPage);
 </script>
