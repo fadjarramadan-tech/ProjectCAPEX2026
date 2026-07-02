@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BNI CAPEX - Lembar Validasi Eksekutif</title>
+    <style>
+        :root {
+            --bni-teal: #006677;
+            --bni-teal-dark: #004d5a;
+            --bni-orange: #E57200;
+            --bg-canvas: #f0f4f5;
+            --text-dark: #222222;
+            --success-green: #28a745;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-canvas); padding: 25px; margin: 0; color: var(--text-dark); }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .validasi-box { background: white; padding: 35px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border-top: 6px solid var(--bni-orange); }
+        h2 { color: var(--bni-teal-dark); margin-top: 0; font-size: 22px; border-bottom: 2px solid #eef2f4; padding-bottom: 10px; }
+        
+        .form-group { margin-bottom: 18px; display: flex; flex-direction: column; gap: 6px; }
+        .form-group label { font-weight: 600; font-size: 13.5px; color: var(--bni-teal-dark); }
+        .form-group select, .form-group input { padding: 10px; border-radius: 6px; border: 1px solid #ced4da; outline: none; font-size: 14px; }
+        
+        .summary-card { background-color: #f8fafb; border: 1px solid #eef2f4; border-radius: 8px; padding: 20px; margin: 25px 0; }
+        .grid-summary { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        .summary-item { border-bottom: 1px solid #eef2f4; padding-bottom: 8px; }
+        .summary-item span { font-size: 13px; color: #666; display: block; }
+        .summary-item strong { font-size: 16px; color: var(--bni-teal-dark); }
+
+        .disclaimer-box { background-color: #fff3e0; border-left: 5px solid var(--bni-orange); padding: 15px; border-radius: 4px; margin-bottom: 25px; font-size: 12.5px; line-height: 1.6; color: #795548; }
+        .btn-submit { background-color: var(--success-green); color: white; width: 100%; padding: 14px; border: none; border-radius: 6px; font-weight: bold; font-size: 15px; cursor: pointer; transition: background 0.2s; }
+        .btn-submit:hover { background-color: #218838; }
+        .btn-submit:disabled { background-color: #c8cbcf; cursor: not-allowed; }
+        
+        .status-badge-locked { background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 6px; text-align: center; font-weight: bold; margin-bottom: 20px; display: none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="validasi-box">
+        <h2>Pernyataan Validasi & Penguncian Realisasi Anggaran</h2>
+        
+        <div id="lock-banner" class="status-badge-locked">⚠️ DATA WILAYAH INI TELAH DIVALIDASI & DIKUNCI. PERUBAHAN TIDAK DIIZINKAN.</div>
+
+        <div class="form-group">
+            <label for="val-wilayah">Pilih Wilayah Kerja Anda:</label>
+            <select id="val-wilayah" onchange="fetchDataWilayah()">
+                <option value="">-- Pilih Wilayah --</option>
+                </select>
+        </div>
+
+        <div class="summary-card">
+            <h3 style="margin-top:0; font-size:14px; text-transform:uppercase; color:var(--bni-orange);">Ringkasan Usulan Realisasi Anggaran</h3>
+            <div class="grid-summary">
+                <div class="summary-item"><span>Total Proyek Terkonfirmasi</span><strong id="lbl-total-proyek">0 Proyek</strong></div>
+                <div class="summary-item"><span>Total Plafon ENP Awal</span><strong id="lbl-enp-awal">Rp 0</strong></div>
+                <div class="summary-item"><span>Total Usul Penyesuaian ENP</span><strong id="lbl-enp-usulan">Rp 0</strong></div>
+                <div class="summary-item"><span>Total Usul Alokasi Revisi RBB</span><strong id="lbl-rbb-revisi" style="color:var(--bni-teal);">Rp 0</strong></div>
+                <div class="summary-item" style="grid-column: span 2;"><span>Total Keseluruhan Rencana Realisasi s.d Desember</span><strong id="lbl-realisasi-total" style="color:var(--success-green); font-size:18px;">Rp 0</strong></div>
+            </div>
+        </div>
+
+        <form id="form-validasi" onsubmit="executeValidation(event)">
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px;">
+                <div class="form-group"><label>Nama Validator / Pejabat:</label><input type="text" id="val-nama" required placeholder="Nama Lengkap"></div>
+                <div class="form-group"><label>NPP:</label><input type="text" id="val-npp" required placeholder="Nomor Pegawai"></div>
+                <div class="form-group"><label>Jabatan:</label><input type="text" id="val-jabatan" required placeholder="Contoh: Pemimpin Wilayah / RBB Analyst"></div>
+            </div>
+
+            <div class="disclaimer-box">
+                <strong>📌 AKTA DISCLAIMER & TANGGUNG JAWAB DATA:</strong><br>
+                Dengan menekan tombol submit di bawah ini, saya menyatakan bahwa seluruh data penyesuaian plafon investasi, restrukturisasi anggaran entitas, serta sebaran alokasi triwulan realisasi RBB untuk seluruh unit kerja di bawah naungan Wilayah ini telah diperiksa secara komprehensif, dinyatakan <strong>LENGKAP, BENAR, dan VALID</strong>. Pihak Wilayah bertanggung jawab penuh atas implikasi hasil inputan data ini pada evaluasi anggaran korporat berikutnya. Setelah validasi dikirim, hak akses editing pada Wilayah bersangkutan akan <strong>DITUTUP SECARA PERMANEN</strong>.
+            </div>
+
+            <button type="submit" id="btn-trigger" class="btn-submit" disabled>🔒 Kirim Pernyataan Validasi & Kunci Data</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const API_URL_BASE = "https://script.google.com/macros/s/AKfycbxfvE-fRf3VQy-ViYHQ9ybXI6NWLxFxFOwW-Efnuay_mgJIiGGLjZ_mBBs_sl8b4SPl/exec";
+    let rawServerResponse = {};
+
+    function formatRibuan(angka) {
+        if (!angka) return '0';
+        return Math.round(angka).toLocaleString('id-ID');
+    }
+
+    async function initPage() {
+        const response = await fetch(`${API_URL_BASE}?action=get_data`);
+        rawServerResponse = await response.json();
+        
+        const wilayahSelect = document.getElementById('val-wilayah');
+        const wilayahSet = new Set();
+        (rawServerResponse.projects || []).forEach(p => { if (p.Wilayah) wilayahSet.add(p.Wilayah); });
+        
+        Array.from(wilayahSet).sort().forEach(w => {
+            let opt = document.createElement('option'); opt.value = w; opt.textContent = w;
+            wilayahSelect.appendChild(opt);
+        });
+    }
+
+    function fetchDataWilayah() {
+        const selectedWilayah = document.getElementById('val-wilayah').value;
+        if(!selectedWilayah) return resetSummary();
+
+        // Cek status kunci wilayah (diasumsikan server menyimpan daftar status lock wilayah)
+        const isLocked = rawServerResponse.lockedWilayah && rawServerResponse.lockedWilayah[selectedWilayah];
+        if (isLocked) {
+            document.getElementById('lock-banner').style.display = 'block';
+            document.getElementById('btn-trigger').disabled = true;
+        } else {
+            document.getElementById('lock-banner').style.display = 'none';
+            document.getElementById('btn-trigger').disabled = false;
+        }
+
+        let projects = rawServerResponse.projects || [];
+        let details = rawServerResponse.confirmedDetails || {};
+
+        let totalProyek = 0, enpAwal = 0, enpUsulan = 0, rbbRevisi = 0, realisasiTotal = 0;
+
+        projects.forEach(p => {
+            if(p.Wilayah === selectedWilayah && p.IsConfirmedState) {
+                totalProyek++;
+                enpAwal += parseFloat(p.Alokasi_ENP || 0);
+                
+                let d = details[p.Project_Number];
+                if(d) {
+                    enpUsulan += parseFloat(d.alokasiValue || 0);
+                    rbbRevisi += parseFloat(d.totalRealisasi || 0);
+                    realisasiTotal += parseFloat(d.totalRealisasi || 0); // Akumulasi s.d Des
+                }
+            }
+        });
+
+        document.getElementById('lbl-total-proyek').innerText = totalProyek + " Proyek";
+        document.getElementById('lbl-enp-awal').innerText = "Rp " + formatRibuan(enpAwal);
+        document.getElementById('lbl-enp-usulan').innerText = "Rp " + formatRibuan(enpUsulan);
+        document.getElementById('lbl-rbb-revisi').innerText = "Rp " + formatRibuan(rbbRevisi);
+        document.getElementById('lbl-realisasi-total').innerText = "Rp " + formatRibuan(realisasiTotal);
+    }
+
+    function resetSummary() {
+        document.getElementById('lbl-total-proyek').innerText = "0 Proyek";
+        document.getElementById('lbl-enp-awal').innerText = "Rp 0";
+        document.getElementById('lbl-enp-usulan').innerText = "Rp 0";
+        document.getElementById('lbl-rbb-revisi').innerText = "Rp 0";
+        document.getElementById('lbl-realisasi-total').innerText = "Rp 0";
+        document.getElementById('btn-trigger').disabled = true;
+    }
+
+    async function executeValidation(e) {
+    e.preventDefault();
+    if(!confirm("Apakah Anda yakin ingin MEMVALIDASI dan MENGUNCI data untuk wilayah ini? Tindakan ini tidak dapat dibatalkan.")) return;
+
+    document.getElementById('btn-trigger').innerText = "Sedang Mengunci Database...";
+    document.getElementById('btn-trigger').disabled = true;
+
+    const payload = {
+        wilayah: document.getElementById('val-wilayah').value,
+        nama: document.getElementById('val-nama').value,
+        npp: document.getElementById('val-npp').value,
+        jabatan: document.getElementById('val-jabatan').value,
+        action: "lock_wilayah" // Memastikan parameter action ikut terkirim di dalam body JSON
+    };
+
+    try {
+        const response = await fetch(`${API_URL_BASE}`, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        
+        // Ambil respon sebagai teks biasa terlebih dahulu untuk menghindari crash token 'E'
+        const textResponse = await response.text(); 
+        
+        // Cek jika respon dari server diawali dengan kata ERROR
+        if (textResponse.startsWith("ERROR:")) {
+            alert(textResponse); // Tampilkan pesan error langsung dari server
+            document.getElementById('btn-trigger').innerText = "🔒 Kirim Pernyataan Validasi & Kunci Data";
+            document.getElementById('btn-trigger').disabled = false;
+            return;
+        }
+
+        // Jika bukan error teks biasa, konversi ke objek JSON
+        const res = JSON.parse(textResponse);
+        if(res.status === "success") {
+            alert(`Data Wilayah ${payload.wilayah} Berhasil divalidasi dan Dikunci secara Permanen!`);
+            window.location.reload();
+        } else {
+            alert("Gagal mengunci: " + (res.message || "Terjadi kesalahan"));
+            document.getElementById('btn-trigger').innerText = "🔒 Kirim Pernyataan Validasi & Kunci Data";
+            document.getElementById('btn-trigger').disabled = false;
+        }
+    } catch(err) {
+        alert("Terjadi Error System: " + err.message);
+        document.getElementById('btn-trigger').innerText = "🔒 Kirim Pernyataan Validasi & Kunci Data";
+        document.getElementById('btn-trigger').disabled = false;
+    }
+}
+
+    document.addEventListener('DOMContentLoaded', initPage);
+</script>
+</body>
+</html>
