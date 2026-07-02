@@ -98,15 +98,15 @@
 
     <div class="kpi-container">
         <div class="kpi-card">
-            <div class="kpi-title">Total Proyek Terkonfirmasi</div>
-            <div class="kpi-value" id="kpi-count">0 Proyek</div>
+            <div class="kpi-title">Total Project Terkonfirmasi</div>
+            <div class="kpi-value" id="kpi-count">0 Project</div>
         </div>
         <div class="kpi-card highlight">
-            <div class="kpi-title">Total Plafon Anggaran (ENP Final)</div>
+            <div class="kpi-title">Total Pagu Maks Anggaran (Usulan ENP Final)</div>
             <div class="kpi-value" id="kpi-total-enp">Rp 0</div>
         </div>
         <div class="kpi-card">
-            <div class="kpi-title">Rencana Penyerapan Teralokasi</div>
+            <div class="kpi-title">Total Usul Anggaran Revisi RBB / Rencana Realisasi</div>
             <div class="kpi-value" id="kpi-total-realisasi" style="color: var(--success-green);">Rp 0</div>
         </div>
     </div>
@@ -126,7 +126,7 @@
                 </select>
             </div>
             <div class="filter-group">
-                <input type="text" id="search-summary" style="width: 250px;" placeholder="Cari No Proyek / Nama..." onkeyup="filterAndRender()">
+                <input type="text" id="search-summary" style="width: 250px;" placeholder="Cari No Project / Nama..." onkeyup="filterAndRender()">
             </div>
             
             <div style="margin-left: auto; display: flex; gap: 8px;">
@@ -276,7 +276,7 @@
             totalEnpSemula += parseFloat(item.base.Alokasi_ENP || 0);
             if(item.detail) totalRealisasi += parseFloat(item.detail.totalRealisasi || 0);
         });
-        document.getElementById('kpi-count').innerText = `${count} Proyek`;
+        document.getElementById('kpi-count').innerText = `${count} Project`;
         document.getElementById('kpi-total-enp').innerText = `Rp ${formatRibuan(totalEnpSemula)}`;
         document.getElementById('kpi-total-realisasi').innerText = `Rp ${formatRibuan(totalRealisasi)}`;
     }
