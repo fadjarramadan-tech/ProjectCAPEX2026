@@ -191,9 +191,17 @@
             const projects = result.projects || [];
             const details = result.confirmedDetails || {};
 
-            globalConfirmedData = projects.filter(p => p.IsConfirmedState === true).map(p => {
-                return { base: p, detail: details[p.Project_Number] || null };
-            });
+            // Mengambil data dan mengurutkan berdasarkan Wilayah secara Ascending
+            globalConfirmedData = projects
+                .filter(p => p.IsConfirmedState === true)
+                .map(p => {
+                    return { base: p, detail: details[p.Project_Number] || null };
+                })
+                .sort((a, b) => {
+                    let wilA = (a.base.Wilayah || "").toString().toUpperCase();
+                    let wilB = (b.base.Wilayah || "").toString().toUpperCase();
+                    return wilA.localeCompare(wilB);
+                });
 
             populateFilters();
         } catch(e) {
@@ -350,7 +358,7 @@
                 <td class="quarter-col">${formatRibuan(wTot.q2)}</td>
                 <td class="col-q3">${formatRibuan(wTot.jul)}</td><td class="col-q3">${formatRibuan(wTot.aug)}</td><td class="col-q3">${formatRibuan(wTot.sep)}</td>
                 <td class="quarter-col">${formatRibuan(wTot.q3)}</td>
-                <td class="col-q4 Bell">${formatRibuan(wTot.oct)}</td><td class="col-q4">${formatRibuan(wTot.nov)}</td><td class="col-q4">${formatRibuan(wTot.dec)}</td>
+                <td class="col-q4">${formatRibuan(wTot.oct)}</td><td class="col-q4">${formatRibuan(wTot.nov)}</td><td class="col-q4">${formatRibuan(wTot.dec)}</td>
                 <td class="quarter-col">${formatRibuan(wTot.q4)}</td>
                 <td style="text-align:right; font-weight:bold; color:var(--bni-teal-dark);">${formatRibuan(wTot.revRbb)}</td>
             `;
