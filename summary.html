@@ -29,14 +29,14 @@
         header {
             background: linear-gradient(135deg, var(--bni-teal), var(--bni-teal-dark));
             color: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 25px;
-            display: flex; justify-content: space-between; align-items: center;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;
         }
 
         header h1 { margin: 0; font-size: 24px; font-weight: 700; }
         header p { margin: 5px 0 0 0; opacity: 0.85; font-size: 13px; }
         
-        .btn-back { background-color: transparent; color: white; padding: 10px 16px; border: 1px solid white; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; font-size: 13px; transition: all 0.2s; }
-        .btn-back:hover { background-color: white; color: var(--bni-teal-dark); }
+        .btn-back { background-color: transparent; color: white; padding: 10px 16px; border: 1px solid white; border-radius: 6px; font-weight: bold; cursor: pointer; text-decoration: none; font-size: 13px; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; }
+        .btn-back:hover { background-color: white; color: var(--bni-teal-dark); transform: translateY(-1px); }
 
         .kpi-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 25px; }
         .kpi-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border-left: 5px solid var(--bni-teal); }
@@ -88,7 +88,12 @@
             <h1>Summary Executive Hasil Konfirmasi Investasi</h1>
             <p>Sistem Pelaporan Realisasi Anggaran Terkonsolidasi 2026</p>
         </div>
-        <button onclick="window.history.back()" class="btn-back">⬅️ Kembali ke Monitor Utama</button>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <a href="index.html" class="btn-back" style="background-color: var(--bni-teal-dark); border-color: rgba(255,255,255,0.3);">🏠 Panduan & Progress</a>
+            <a href="validasi-wilayah.html" class="btn-back" style="background-color: #008094; border-color: rgba(255,255,255,0.2);">📝 Lembar Validasi</a>
+            <a href="Input-Konfirmasi.html" class="btn-back" style="background-color: var(--bni-orange); border-color: transparent;">📥 Input Konfirmasi</a>
+            <button onclick="window.history.back()" class="btn-back">⬅️ Kembali</button>
+        </div>
     </header>
 
     <div class="kpi-container">
@@ -304,7 +309,6 @@
             hierarchy[wil].units[unitKey].projects.push(item);
         });
 
-        // Render Baris GRAND TOTAL Paling Atas
         let trGrand = document.createElement('tr');
         trGrand.className = 'grand-total-row';
         trGrand.innerHTML = `
@@ -331,7 +335,6 @@
 
             let wTot = hierarchy[wilayah].totals;
 
-            // FIX: Gabungkan teks Judul Wilayah dan Angka Subtotal Wilayah ke dalam 1 baris
             let trWil = document.createElement('tr');
             trWil.className = 'group-header-wilayah';
             trWil.onclick = () => toggleGroupDisplay(idWilayah);
@@ -347,7 +350,7 @@
                 <td class="quarter-col">${formatRibuan(wTot.q2)}</td>
                 <td class="col-q3">${formatRibuan(wTot.jul)}</td><td class="col-q3">${formatRibuan(wTot.aug)}</td><td class="col-q3">${formatRibuan(wTot.sep)}</td>
                 <td class="quarter-col">${formatRibuan(wTot.q3)}</td>
-                <td class="col-q4">${formatRibuan(wTot.oct)}</td><td class="col-q4">${formatRibuan(wTot.nov)}</td><td class="col-q4">${formatRibuan(wTot.dec)}</td>
+                <td class="col-q4 Bell">${formatRibuan(wTot.oct)}</td><td class="col-q4">${formatRibuan(wTot.nov)}</td><td class="col-q4">${formatRibuan(wTot.dec)}</td>
                 <td class="quarter-col">${formatRibuan(wTot.q4)}</td>
                 <td style="text-align:right; font-weight:bold; color:var(--bni-teal-dark);">${formatRibuan(wTot.revRbb)}</td>
             `;
@@ -359,7 +362,6 @@
 
                 let uTot = hierarchy[wilayah].units[unitKey].totals;
 
-                // FIX: Gabungkan teks Unit Kerja dan Angka Subtotal Unit ke dalam 1 baris
                 let trUnit = document.createElement('tr');
                 trUnit.className = 'group-header-entitas';
                 trUnit.style.display = collapsedGroups[idWilayah] ? '' : 'none';
@@ -382,7 +384,6 @@
                 `;
                 tbody.appendChild(trUnit);
 
-                // Baris Detail Data Project
                 hierarchy[wilayah].units[unitKey].projects.forEach(item => {
                     const det = item.detail;
                     const comp = item.computed;
@@ -459,7 +460,6 @@
         });
     }
 
-    // Fungsi expand/collapse grup row baris utama
     function toggleGroupDisplay(groupId) {
         collapsedGroups[groupId] = !collapsedGroups[groupId];
         filterAndRender();
