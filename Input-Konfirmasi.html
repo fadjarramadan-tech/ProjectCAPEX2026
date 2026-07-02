@@ -33,9 +33,9 @@
         header .header-title h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: 0.5px; }
         header .header-title p { margin: 5px 0 0 0; opacity: 0.85; font-size: 14px; }
 
-        .nav-menu-box { display: flex; align-items: center; gap: 12px; }
+        .nav-menu-box { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         .btn-nav-summary {
-            background-color: var(--bni-orange); color: white; padding: 12px 20px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 13.5px; box-shadow: 0 4px 10px rgba(229, 114, 0, 0.25); transition: all 0.2s;
+            background-color: var(--bni-orange); color: white; padding: 10px 16px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 13px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); transition: all 0.2s; white-space: nowrap;
         }
         .btn-nav-summary:hover { background-color: var(--bni-orange-hover); transform: translateY(-1px); }
 
@@ -136,7 +136,10 @@
         </div>
         
         <div class="nav-menu-box">
-            <a href="summary.html" class="btn-nav-summary">📊 Buka Dashboard Summary</a>
+            <a href="index.html" class="btn-nav-summary" style="background-color: var(--bni-teal-dark); border: 1px solid rgba(255,255,255,0.3);">🏠 Panduan & Progress</a>
+            <a href="validasi-wilayah.html" class="btn-nav-summary" style="background-color: #008094; border: 1px solid rgba(255,255,255,0.2);">📝 Lembar Validasi</a>
+            <a href="Rincian-PenyesuaianProject.html" class="btn-nav-summary" style="background-color: #117a8b; border: 1px solid rgba(255,255,255,0.2);">📋 Rincian Penyesuaian</a>
+            <a href="summary.html" class="btn-nav-summary">📊 Dashboard Summary</a>
         </div>
         
         <div class="progress-banner">
@@ -348,49 +351,46 @@
     }
 
     async function fetchData() {
-    const loadingEl = document.getElementById('loading');
-    const errorEl = document.getElementById('error');
-    loadingEl.style.display = 'block';
-    loadingEl.innerText = "Memproses integrasi data, mohon tunggu...";
-    try {
-        const response = await fetch(`${API_URL_BASE}?action=get_data`);
-        if (!response.ok) throw new Error('Gagal memuat respon backend.');
-        const result = await response.json();
-        
-        loadingEl.style.display = 'none';
-        
-        // Bersihkan data awal dari Project Number bernilai 0 atau blank
-        const rawProjects = result.projects || [];
-        globalProjects = rawProjects.filter(p => {
-            if (!p.Project_Number) return false;
-            const trimmed = p.Project_Number.toString().trim();
-            return trimmed !== "" && trimmed !== "0" && trimmed !== "null" && trimmed !== "undefined";
-        });
+        const loadingEl = document.getElementById('loading');
+        const errorEl = document.getElementById('error');
+        loadingEl.style.display = 'block';
+        loadingEl.innerText = "Memproses integrasi data, mohon tunggu...";
+        try {
+            const response = await fetch(`${API_URL_BASE}?action=get_data`);
+            if (!response.ok) throw new Error('Gagal memuat respon backend.');
+            const result = await response.json();
+            
+            loadingEl.style.display = 'none';
+            
+            const rawProjects = result.projects || [];
+            globalProjects = rawProjects.filter(p => {
+                if (!p.Project_Number) return false;
+                const trimmed = p.Project_Number.toString().trim();
+                return trimmed !== "" && trimmed !== "0" && trimmed !== "null" && trimmed !== "undefined";
+            });
 
-        globalOutlets = result.outlets || [];
-        globalConfirmedDetails = result.confirmedDetails || {};
-        globalRejectedProjects = result.rejectedProjects || [];
-        
-        // RE-MAPPING SISTEM LOCK KUNCI SECARA ABSOLUT
-        globalLockedWilayah = {};
-        if (result.lockedWilayah) {
-            for (let key in result.lockedWilayah) {
-                // Paksa key nama wilayah dari server menjadi UPPERCASE dan bersih dari spasi hantu
-                globalLockedWilayah[key.toString().trim().toUpperCase()] = result.lockedWilayah[key];
+            globalOutlets = result.outlets || [];
+            globalConfirmedDetails = result.confirmedDetails || {};
+            globalRejectedProjects = result.rejectedProjects || [];
+            
+            globalLockedWilayah = {};
+            if (result.lockedWilayah) {
+                for (let key in result.lockedWilayah) {
+                    globalLockedWilayah[key.toString().trim().toUpperCase()] = result.lockedWilayah[key];
+                }
             }
-        }
-        
-        currentFilteredList = [...globalProjects];
+            
+            currentFilteredList = [...globalProjects];
 
-        document.getElementById('filter-wrapper').style.display = 'flex';
-        document.getElementById('table-wrapper').style.display = 'block';
-        
-        populateWilayahFilter(globalProjects);
-    } catch (error) {
-        loadingEl.style.display = 'none'; errorEl.style.display = 'block';
-        errorEl.innerText = `Koneksi Integrasi Gagal: ${error.message}`;
+            document.getElementById('filter-wrapper').style.display = 'flex';
+            document.getElementById('table-wrapper').style.display = 'block';
+            
+            populateWilayahFilter(globalProjects);
+        } catch (error) {
+            loadingEl.style.display = 'none'; errorEl.style.display = 'block';
+            errorEl.innerText = `Koneksi Integrasi Gagal: ${error.message}`;
+        }
     }
-}
 
     function updateLiveFilterProgressTracker(filteredData) {
         const totalFiltered = filteredData.length;
@@ -454,8 +454,6 @@
     function filterData() {
         const wilayahVal = document.getElementById('filter-wilayah').value;
         const unitKerjaVal = document.getElementById('filter-unit-kerja').value;
-        
-        // FIX: Penyederhanaan ID Selector agar tidak memicu pembatalan silent javascript error
         const searchInput = document.getElementById('search-project');
         const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : "";
 
@@ -475,75 +473,66 @@
     }
 
     function renderTable(data) {
-    const container = document.getElementById('data-rows');
-    container.innerHTML = '';
-    
-    data.forEach((item, index) => {
-        const tr = document.createElement('tr');
-        let rowClass = item.IsConfirmedState === true ? 'confirmed' : '';
+        const container = document.getElementById('data-rows');
+        container.innerHTML = '';
         
-        // 1. AMBIL NAMA WILAYAH DARI BARIS DATA (Contoh: "W05")
-        const rowWilayahRaw = item.Wilayah ? item.Wilayah.toString().trim().toUpperCase() : "";
-        
-        // 2. DETEKSI KUNCI ABSOLUT (Mengecek langsung ke dalam Object Lock Server)
-        let isProjectLocked = false;
-        
-        // Cek langsung dengan key wilayah (Sangat Presisi)
-        if (globalLockedWilayah[rowWilayahRaw] === "LOCKED") {
-            isProjectLocked = true;
-        } else {
-            // Cek cadangan jika ada variasi nama wilayah (Pencocokan Substring)
-            for (let lockedKey in globalLockedWilayah) {
-                const cleanLockKey = lockedKey.toString().trim().toUpperCase();
-                if (globalLockedWilayah[lockedKey] === "LOCKED") {
-                    if (rowWilayahRaw.includes(cleanLockKey) || cleanLockKey.includes(rowWilayahRaw)) {
-                        isProjectLocked = true;
-                        break;
+        data.forEach((item, index) => {
+            const tr = document.createElement('tr');
+            let rowClass = item.IsConfirmedState === true ? 'confirmed' : '';
+            const rowWilayahRaw = item.Wilayah ? item.Wilayah.toString().trim().toUpperCase() : "";
+            
+            let isProjectLocked = false;
+            if (globalLockedWilayah[rowWilayahRaw] === "LOCKED") {
+                isProjectLocked = true;
+            } else {
+                for (let lockedKey in globalLockedWilayah) {
+                    const cleanLockKey = lockedKey.toString().trim().toUpperCase();
+                    if (globalLockedWilayah[lockedKey] === "LOCKED") {
+                        if (rowWilayahRaw.includes(cleanLockKey) || cleanLockKey.includes(rowWilayahRaw)) {
+                            isProjectLocked = true;
+                            break;
+                        }
                     }
                 }
             }
-        }
-        
-        let actionHtml = '';
-        
-        if (isProjectLocked) {
-            // JIKA WILAYAH TERKUNCI: Ganti kolom aksi dengan tombol Tunggal, Matikan Klik (Disabled & Pointer Events None)
-            actionHtml = `
-                <div class="actions" style="width: 100%;">
-                    <button class="btn-view" style="width:100%; background-color: #6c757d; color: #ffffff; cursor: not-allowed; opacity: 0.65; pointer-events: none;" disabled onclick="openConfirmationModal('${item.Project_Number}', ${index}, true)">🔒 View Detail (Locked)</button>
-                </div>
-            `;
-        } else {
-            // JIKA WILAYAH BELUM DIKUNCI: Menu kontrol normal aktif
-            actionHtml = item.IsConfirmedState === true ? `
-                <div class="actions">
-                    <button class="btn-view" onclick="openConfirmationModal('${item.Project_Number}', ${index}, true)">View</button>
-                    <button class="btn-edit" onclick="openConfirmationModal('${item.Project_Number}', ${index}, false)">Edit</button>
-                    <button class="btn-delete-confirm" onclick="handleDeleteConfirmation('${item.Project_Number}')">Hapus</button>
-                </div>
-            ` : `
-                <div class="actions">
-                    <button class="btn-reject" onclick="handleDedicatedReject('${item.Project_Number}', ${index})">Drop Project</button>
-                    <button class="btn-confirm" onclick="openConfirmationModal('${item.Project_Number}', ${index}, false)">Konfirmasi</button>
-                </div>
-            `;
-        }
+            
+            let actionHtml = '';
+            if (isProjectLocked) {
+                actionHtml = `
+                    <div class="actions" style="width: 100%;">
+                        <button class="btn-view" style="width:100%; background-color: #6c757d; color: #ffffff; cursor: not-allowed; opacity: 0.65; pointer-events: none;" disabled onclick="openConfirmationModal('${item.Project_Number}', ${index}, true)">🔒 View Detail (Locked)</button>
+                    </div>
+                `;
+            } else {
+                actionHtml = item.IsConfirmedState === true ? `
+                    <div class="actions">
+                        <button class="btn-view" onclick="openConfirmationModal('${item.Project_Number}', ${index}, true)">View</button>
+                        <button class="btn-edit" onclick="openConfirmationModal('${item.Project_Number}', ${index}, false)">Edit</button>
+                        <button class="btn-delete-confirm" onclick="handleDeleteConfirmation('${item.Project_Number}')">Hapus</button>
+                    </div>
+                ` : `
+                    <div class="actions">
+                        <button class="btn-reject" onclick="handleDedicatedReject('${item.Project_Number}', ${index})">Drop Project</button>
+                        <button class="btn-confirm" onclick="openConfirmationModal('${item.Project_Number}', ${index}, false)">Konfirmasi</button>
+                    </div>
+                `;
+            }
 
-        tr.className = rowClass;
-        tr.innerHTML = `
-            <td style="text-align: center; font-weight: 600; color: #777;">${index + 1}</td>
-            <td>${item.Wilayah}</td>
-            <td>${item.Entitas}</td>
-            <td>${item.Operating_Unit}</td>
-            <td><strong>${item.Project_Number}</strong></td>
-            <td>${item.Nama_Project}</td>
-            <td style="text-align: right; font-weight: 700; color: var(--bni-teal);">${formatRibuan(item.Alokasi_ENP)}</td>
-            <td>${item.Remarks}</td>
-            <td>${actionHtml}</td>
-        `;
-        container.appendChild(tr);
-    });
-}
+            tr.className = rowClass;
+            tr.innerHTML = `
+                <td style="text-align: center; font-weight: 600; color: #777;">${index + 1}</td>
+                <td>${item.Wilayah}</td>
+                <td>${item.Entitas}</td>
+                <td>${item.Operating_Unit}</td>
+                <td><strong>${item.Project_Number}</strong></td>
+                <td>${item.Nama_Project}</td>
+                <td style="text-align: right; font-weight: 700; color: var(--bni-teal);">${formatRibuan(item.Alokasi_ENP)}</td>
+                <td>${item.Remarks}</td>
+                <td>${actionHtml}</td>
+            `;
+            container.appendChild(tr);
+        });
+    }
 
     async function handleDeleteConfirmation(projectNumber) {
         if(!confirm(`Apakah Anda yakin ingin menghapus LOG HASIL KONFIRMASI untuk proyek ${projectNumber}?\n\nData proyek ini akan dikembalikan ke status awal belum dikonfirmasi.`)) return;
@@ -579,7 +568,6 @@
         } else {
             globalRejectedProjects.forEach((item, index) => {
                 const tr = document.createElement('tr');
-                
                 const currentWilayah = item.Wilayah ? item.Wilayah.toString().trim().toUpperCase() : "";
                 const isAreaLocked = (globalLockedWilayah[currentWilayah] === "LOCKED");
                 const btnRestoreHtml = isAreaLocked ? 
