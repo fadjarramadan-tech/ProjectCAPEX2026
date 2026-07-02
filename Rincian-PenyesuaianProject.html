@@ -37,8 +37,8 @@
 <div class="container">
     <header>
         <div>
-            <h1>Historical Penyesuaian Proyek</h1>
-            <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.9;">Daftar proyek yang mengalami perubahan Plafon ENP atau pergeseran Entitas Kerja</p>
+            <h1>Historical Penyesuaian Project</h1>
+            <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.9;">Daftar project yang mengalami perubahan Plafon ENP atau pergeseran Entitas Kerja</p>
         </div>
         <a href="javascript:window.history.back()" class="btn-back">⬅️ Kembali</a>
     </header>
@@ -58,9 +58,9 @@
                     <th rowspan="2">User Konfirmator</th>
                 </tr>
                 <tr>
-                    <th>Semula (Master)</th>
+                    <th>Semula</th>
                     <th>Menjadi (Usulan)</th>
-                    <th>Semula (Master)</th>
+                    <th>Semula</th>
                     <th>Menjadi (Usulan)</th>
                 </tr>
             </thead>
@@ -126,7 +126,7 @@
             });
 
             if (idx === 1) {
-                tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:20px; font-weight:bold; color:#888;">Tidak ada data proyek yang mengalami penyesuaian.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:20px; font-weight:bold; color:#888;">Tidak ada data project yang mengalami penyesuaian.</td></tr>`;
             }
         } catch(e) {
             document.getElementById('loading').innerText = "Gagal memproses log audit: " + e.message;
