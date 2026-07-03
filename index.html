@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BNI CAPEX - Portal Monitor Utama</title>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
             --bni-teal: #006677;
@@ -86,6 +87,7 @@
 </head>
 <body>
 
+
 <div class="container">
     <header>
         <div class="header-title">
@@ -94,6 +96,8 @@
         </div>
         <div class="system-date" id="live-date">Memuat Tanggal...</div>
     </header>
+
+
 
     <div class="portal-grid">
         <div class="card-panel" style="display: flex; flex-direction: column; justify-content: space-between;">
@@ -118,7 +122,6 @@
                     </div>
                 </div>
             </div>
-
             <div>
                 <div class="nav-buttons-container">
                     <a href="Input-Konfirmasi.html" class="btn-nav-portal btn-input">
@@ -137,11 +140,13 @@
             </div>
         </div>
 
+
         <div class="card-panel">
             <h2>🌐 Real-Time Monitoring Progres Konfirmasi Wilayah</h2>
             <div class="progress-grid" id="region-progress-container">
                 <div class="loading" id="portal-loading">Sinkronisasi database wilayah...</div>
             </div>
+
         </div>
     </div>
 </div>
@@ -155,84 +160,175 @@
     }
 
     async function loadPortalDashboardMetrics() {
-        try {
-            const response = await fetch(`${API_URL_BASE}?action=get_data`);
-            const result = await response.json();
+    try {
+        const response = await fetch(`${API_URL_BASE}?action=get_data`);
+        const result = await response.json();
+        
+        document.getElementById('portal-loading').style.display = 'none';
+        
+        const projects = result.projects || [];
+        const lockedWilayah = result.lockedWilayah || {};
+        const financialSummary = result.financialSummary || {};
+
+        // 1. Kelompokkan Progres Pengisian Berdasarkan Wilayah
+        let regionMetrics = {};
+        projects.forEach(p => {
+            if (!p.Wilayah || p.Wilayah === "-") return;
             
-            document.getElementById('portal-loading').style.display = 'none';
-            
-            const projects = result.projects || [];
-            const lockedWilayah = result.lockedWilayah || {};
+            const cleanProjNum = p.Project_Number ? p.Project_Number.toString().trim() : "";
+            if (cleanProjNum === "" || cleanProjNum === "0") return;
 
-            // 1. Kelompokkan Progres Pengisian Berdasarkan Wilayah
-            let regionMetrics = {};
-            projects.forEach(p => {
-                if (!p.Wilayah || p.Wilayah === "-") return;
-                
-                // Saring Project Number gadungan bernilai 0 / blank agar statistik akurat
-                const cleanProjNum = p.Project_Number ? p.Project_Number.toString().trim() : "";
-                if (cleanProjNum === "" || cleanProjNum === "0") return;
-
-                if (!regionMetrics[p.Wilayah]) {
-                    regionMetrics[p.Wilayah] = { total: 0, confirmed: 0 };
-                }
-                
-                regionMetrics[p.Wilayah].total++;
-                if (p.IsConfirmedState === true) {
-                    regionMetrics[p.Wilayah].confirmed++;
-                }
-            });
-
-            // 2. Render Grid Box Secara Dinamis per Wilayah Kerja
-            const container = document.getElementById('region-progress-container');
-            container.innerHTML = '';
-
-            const sortedRegions = Object.keys(regionMetrics).sort();
-            
-            if (sortedRegions.length === 0) {
-                container.innerHTML = `<div class="loading" style="color:#aaa;">Tidak ada data wilayah terdistribusi.</div>`;
-                return;
+            if (!regionMetrics[p.Wilayah]) {
+                regionMetrics[p.Wilayah] = { total: 0, confirmed: 0 };
             }
+            
+            regionMetrics[p.Wilayah].total++;
+            if (p.IsConfirmedState === true) {
+                regionMetrics[p.Wilayah].confirmed++;
+            }
+        });
 
-            sortedRegions.forEach(reg => {
-                const metric = regionMetrics[reg];
-                const pct = metric.total > 0 ? Math.round((metric.confirmed / metric.total) * 100) : 0;
-                
-                // Normalisasi pengecekan flag status LOCK dari server
-                const isLocked = (lockedWilayah[reg.toString().trim().toUpperCase()] === "LOCKED" || lockedWilayah[reg.toString().trim()] === "LOCKED");
-                
-                const statusBadge = isLocked ? 
-                    `<span class="badge badge-lock-status badge-locked">🔒 LOCKED</span>` : 
-                    `<span class="badge badge-lock-status badge-unlocked">🔓 OPEN</span>`;
+        // 2. Render Grid Box Secara Dinamis per Wilayah Kerja
+        const container = document.getElementById('region-progress-container');
+        container.innerHTML = '';
 
-                const card = document.createElement('div');
-                card.className = 'region-card';
-                card.innerHTML = `
-                    <div class="region-name">
-                        <span>Entitas: ${reg}</span>
-                        ${statusBadge}
-                    </div>
-                    <div class="progress-bar-bg">
-                        <div class="progress-bar-fill" style="width: ${pct}%"></div>
-                    </div>
-                    <div class="region-stats">
-                        <span>Progres: ${pct}%</span>
-                        <strong>${metric.confirmed} / ${metric.total} Proyek</strong>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-
-        } catch (e) {
-            document.getElementById('portal-loading').innerText = "Koneksi Sinkronisasi Gagal: " + e.message;
-            document.getElementById('portal-loading').style.color = "red";
+        const sortedRegions = Object.keys(regionMetrics).sort();
+        
+        if (sortedRegions.length === 0) {
+            container.innerHTML = `<div class="loading" style="color:#aaa;">Tidak ada data wilayah terdistribusi.</div>`;
+            return;
         }
+
+        sortedRegions.forEach(reg => {
+    const metric = regionMetrics[reg];
+    const pct = metric.total > 0 ? Math.round((metric.confirmed / metric.total) * 100) : 0;
+    const regKey = reg.toString().trim().toUpperCase();
+
+    // Ambil data finansial (Default jika data kosong)
+    const finData = financialSummary[regKey] ? financialSummary[regKey] : { totalEnp: 0, totalRbb: 0 };
+
+    // Cek apakah total angka finansial semuanya masih 0
+    const isTotalZero = (finData.totalEnp === 0 && finData.totalRbb === 0);
+
+    // Ambil data detail lock validator
+    const lockInfo = lockedWilayah[regKey] && typeof lockedWilayah[regKey] === 'object' 
+        ? lockedWilayah[regKey] 
+        : { status: "OPEN", nama: "-", npp: "-", jabatan: "-", waktu: "-" };
+
+    const isLocked = lockInfo.status === "LOCKED" || lockedWilayah[regKey] === "LOCKED";
+    
+    // 1. MODIFIKASI BADGE STATUS UTAMA
+    let statusBadge = "";
+    if (isLocked) {
+        statusBadge = `<span class="badge badge-lock-status badge-locked">🔒 LOCKED (Valid)</span>`;
+    } else if (isTotalZero) {
+        // Jika belum dikunci DAN angkanya masih 0
+        statusBadge = `<span class="badge badge-lock-status" style="background-color: #FFEAEA; color: black;">🔴 Belum Mengisi</span>`;
+    } else {
+        statusBadge = `<span class="badge badge-lock-status badge-unlocked">🔓 OPEN (Belum Valid)</span>`;
     }
+
+    // Formatter mata uang Juta Rupiah
+    const formatToJuta = (num) => {
+        if (!num || isNaN(num)) return "Rp 0 Juta";
+        const nilaiJuta = num / 1000000; 
+        const formatted = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(nilaiJuta);
+        return `Rp ${formatted} Juta`;
+    };
+
+    const card = document.createElement('div');
+    card.className = 'region-card';
+    card.innerHTML = `
+        <div class="region-name">
+            <span><strong>Entitas: ${reg}</strong></span>
+            ${statusBadge}
+        </div>
+        <div class="progress-bar-bg" style="margin: 8px 0;">
+            <div class="progress-bar-fill" style="width: ${pct}%"></div>
+        </div>
+        <div class="region-stats" style="margin-bottom: 10px; font-weight: 500;">
+            <span>Progres: ${pct}%</span>
+            <strong>${metric.confirmed} / ${metric.total} Proyek</strong>
+        </div>
+        
+        <div class="financial-info" style="border-top: 1px dashed #ccc; padding-top: 8px; font-size: 11.5px; color: #444;">
+            <div style="display:flex; justify-content:space-between; margin-bottom: 3px;">
+                <span>Total Usul ENP:</span> <strong>${formatToJuta(finData.totalEnp)}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom: 3px;">
+                <span>Alokasi Revisi RBB:</span> <strong>${formatToJuta(finData.totalRbb)}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom: 6px;">
+                <span>Rencana Realisasi:</span> <strong>${formatToJuta(finData.totalRbb)}</strong>
+            </div>
+        </div>
+
+        <div class="validation-info" style="background: ${isLocked ? '#e6f4ea' : (isTotalZero ? '#fdf2f2' : '#f8f9fa')}; padding: 8px; border-radius: 6px; font-size: 11px; margin-top: 6px; border: 1px solid ${isLocked ? '#137333' : (isTotalZero ? '#f5b8b8' : '#dadce0')}; line-height: 1.4;">
+            <div style="color: ${isLocked ? '#137333' : (isTotalZero ? '#b91c1c' : '#666')}; font-weight: bold; margin-bottom: 4px;">
+                ${isLocked ? '🗹 Detail Validator:' : (isTotalZero ? '🔴 Status: Belum Mengisi' : '⏳ Status: Menunggu Validasi')}
+            </div>
+            ${isLocked && lockInfo.nama !== "-" ? `
+                <div><strong>Nama:</strong> ${lockInfo.nama} (${lockInfo.npp})</div>
+                <div><strong>Jabatan:</strong> ${lockInfo.jabatan}</div>
+                <div><strong>Waktu:</strong> ${lockInfo.waktu}</div>
+            ` : (isTotalZero ? `
+                <div style="color: #b91c1c;">Belum ada record input project dari Wilayah ini.</div>
+            ` : `
+                <div style="color: #c26c00; font-style: italic;">Belum dikunci oleh Eksekutif Wilayah.</div>
+            `)}
+        </div>
+    `;
+    container.appendChild(card);
+});
+
+    } catch (e) {
+        document.getElementById('portal-loading').innerText = "Koneksi Sinkronisasi Gagal: " + e.message;
+        document.getElementById('portal-loading').style.color = "red";
+    }
+}
 
     document.addEventListener('DOMContentLoaded', () => {
         setLiveDate();
         loadPortalDashboardMetrics();
     });
+
+document.getElementById('btn-download-jpg').addEventListener('click', function () {
+    const container = document.getElementById('region-progress-container');
+    
+    // Memberikan feedback visual sementara saat proses capture
+    const originalBtnText = this.innerText;
+    this.innerText = "⏳ Memproses Gambar...";
+    this.disabled = true;
+
+    // Pengaturan resolusi dan kompensasi scrollbox (max-height)
+    html2canvas(container, {
+        useCORS: true,          // Mengaktifkan pembacaan aset eksternal jika ada
+        scale: 2,               // Meningkatkan kualitas/resolusi gambar agar tidak pecah (2x)
+        height: container.scrollHeight, // Menangkap seluruh card meskipun terpotong scroll vertikal
+        windowHeight: container.scrollHeight
+    }).then(canvas => {
+        // Mengubah canvas menjadi URL data gambar berformat JPG
+        const image = canvas.toDataURL("image/jpeg", 0.9);
+        
+        // Membuat link download bayangan secara dinamis
+        const link = document.createElement('a');
+        link.download = `Monitoring_Progress_Wilayah_${new Date().toISOString().split('T')[0]}.jpg`;
+        link.href = image;
+        
+        // Memicu aksi download otomatis pada browser
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Mengembalikan status tombol
+        document.getElementById('btn-download-jpg').innerText = originalBtnText;
+        document.getElementById('btn-download-jpg').disabled = false;
+    }).catch(err => {
+        alert("Gagal mendownload gambar: " + err.message);
+        document.getElementById('btn-download-jpg').innerText = originalBtnText;
+        document.getElementById('btn-download-jpg').disabled = false;
+    });
+});
 </script>
 </body>
 </html>
