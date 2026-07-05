@@ -4,89 +4,227 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BNI CAPEX - Portal Monitor Utama</title>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --bni-teal: #006677;
             --bni-teal-dark: #004d5a;
+            --bni-teal-light: #e6f0f2;
             --bni-orange: #E57200;
             --bni-orange-hover: #cc6500;
-            --bg-canvas: #f0f4f5;
-            --text-dark: #222222;
-            --success-green: #28a745;
+            --bg-canvas: #f4f7f8;
+            --text-dark: #2b3a42;
+            --success-green: #2e7d32;
+            --border-color: #e2e8f0;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-canvas); color: var(--text-dark); margin: 0; padding: 25px;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-canvas); 
+            color: var(--text-dark); 
+            margin: 0; 
+            padding: 25px;
+            line-height: 1.5;
         }
 
-        .container { max-width: 1400px; margin: 0 auto; }
+        .container { max-width: 1440px; margin: 0 auto; }
 
-        /* HEADER HUB PORTAL */
+        /* HEADER */
         header {
-            background: linear-gradient(135deg, var(--bni-teal), var(--bni-teal-dark)); color: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 25px;
-            display: flex; justify-content: space-between; align-items: center;
+            background: linear-gradient(135deg, var(--bni-teal), var(--bni-teal-dark)); 
+            color: white; 
+            padding: 30px; 
+            border-radius: 16px; 
+            box-shadow: 0 10px 25px rgba(0,83,97,0.15); 
+            margin-bottom: 30px;
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
         }
-        header h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: 0.5px; }
-        header p { margin: 5px 0 0 0; opacity: 0.85; font-size: 14px; }
-        .system-date { background: rgba(255,255,255,0.15); padding: 8px 14px; border-radius: 6px; font-size: 13px; font-weight: 600; }
+        header h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 0.5px; }
+        header p { margin: 6px 0 0 0; opacity: 0.85; font-size: 14px; }
+        .system-date { 
+            background: rgba(255,255,255,0.15); 
+            padding: 10px 16px; 
+            border-radius: 8px; 
+            font-size: 13.5px; 
+            font-weight: 600; 
+            backdrop-filter: blur(4px);
+        }
 
-        /* GRID PEMBAGIAN HALAMAN */
-        .portal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 25px; }
-        @media(max-width: 992px) { .portal-grid { grid-template-columns: 1fr; } }
+        /* GRID PORTAL ATAS */
+        .portal-grid-top { 
+            display: grid; 
+            grid-template-columns: 1fr 1.2fr; 
+            gap: 30px; 
+            margin-bottom: 30px; 
+            align-items: stretch;
+        }
+        @media(max-width: 1024px) { .portal-grid-top { grid-template-columns: 1fr; align-items: start; } }
 
-        /* CARD STYLE PANEL */
-        .card-panel { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.05); }
-        .card-panel h2 { margin-top: 0; color: var(--bni-teal-dark); font-size: 18px; font-weight: 700; border-bottom: 2px solid #eef2f4; padding-bottom: 10px; margin-bottom: 15px; }
+        /* CARD PANEL */
+        .card-panel { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 16px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.04); 
+            border: 1px solid var(--border-color);
+        }
+        .card-panel h2 { 
+            margin-top: 0; 
+            color: var(--bni-teal-dark); 
+            font-size: 18px; 
+            font-weight: 700; 
+            border-bottom: 2px solid var(--bni-teal-light); 
+            padding-bottom: 12px; 
+            margin-bottom: 20px; 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-        /* PANDUAN PENGGUNAAN ALUR */
-        .timeline-guide { position: relative; padding-left: 30px; }
+        .panel-header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-action {
+            background-color: #ffffff;
+            border: 1px solid #cbd5e1;
+            color: #475569;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-action:hover {
+            background-color: #f8fafc;
+            border-color: #94a3b8;
+        }
+
+        /* TIMELINE PANDUAN */
+        .timeline-guide { position: relative; padding-left: 24px; margin-bottom: 25px; }
+        .timeline-guide::before {
+            content: ''; position: absolute; left: 5px; top: 5px; width: 2px; height: calc(100% - 25px); background-color: #e2e8f0;
+        }
         .timeline-item { position: relative; margin-bottom: 20px; }
         .timeline-item::before {
-            content: ''; position: absolute; left: -24px; top: 3px; width: 14px; height: 14px; border-radius: 50%; background-color: var(--bni-orange); border: 3px solid white; box-shadow: 0 0 0 3px var(--bni-teal); z-index: 2;
+            content: ''; position: absolute; left: -24px; top: 4px; width: 12px; height: 12px; border-radius: 50%; background-color: var(--bni-orange); border: 2px solid white; box-shadow: 0 0 0 2px var(--bni-teal); z-index: 2;
         }
-        .timeline-item::after {
-            content: ''; position: absolute; left: -18px; top: 20px; width: 2px; height: calc(100% + 5px); background-color: #ced4da; z-index: 1;
-        }
-        .timeline-item:last-child::after { display: none; }
-        .timeline-item h4 { margin: 0 0 5px 0; color: var(--bni-teal); font-size: 14.5px; font-weight: 700; }
-        .timeline-item p { margin: 0; font-size: 13px; color: #555; line-height: 1.5; }
+        .timeline-item h4 { margin: 0 0 4px 0; color: var(--bni-teal-dark); font-size: 15px; font-weight: 700; }
+        .timeline-item p { margin: 0; font-size: 13px; color: #64748b; line-height: 1.5; }
 
-        /* MENU NAVIGASI CEPAT */
-        .nav-buttons-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 20px; border-top: 1px dashed #e1e8ed; padding-top: 20px; }
+        /* BUTTON NAVIGASI */
+        .nav-buttons-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; border-top: 1px dashed var(--border-color); padding-top: 25px; }
+        @media(max-width: 480px) { .nav-buttons-container { grid-template-columns: 1fr; } }
+        
         .btn-nav-portal {
-            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 15px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 13px; text-align: center; color: white; transition: all 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 15px 12px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 13px; text-align: center; color: white; transition: all 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
         .btn-input { background-color: var(--bni-teal); }
-        .btn-input:hover { background-color: var(--bni-teal-dark); transform: translateY(-2px); }
-        .btn-summary { background-color: var(--primary-blue, #007bff); }
-        .btn-summary:hover { background-color: #0056b3; transform: translateY(-2px); }
+        .btn-input:hover { background-color: var(--bni-teal-dark); transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,102,119,0.3); }
+        .btn-summary { background-color: #0284c7; }
+        .btn-summary:hover { background-color: #0369a1; transform: translateY(-3px); box-shadow: 0 6px 20px rgba(2,132,199,0.3); }
         .btn-validasi { background-color: var(--bni-orange); }
-        .btn-validasi:hover { background-color: var(--bni-orange-hover); transform: translateY(-2px); }
-        .btn-icon { font-size: 24px; }
+        .btn-validasi:hover { background-color: var(--bni-orange-hover); transform: translateY(-3px); box-shadow: 0 6px 20px rgba(229,114,0,0.3); }
+        .btn-icon { font-size: 22px; }
 
-        /* GRID PROGRESS WILAYAH */
-        .progress-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; max-height: 480px; overflow-y: auto; padding-right: 5px; }
-        @media(max-width: 576px) { .progress-grid { grid-template-columns: 1fr; } }
+        /* CHART CONTAINER */
+        .chart-wrapper {
+            background: #fafafa;
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            border-radius: 12px;
+            height: calc(100% - 60px); 
+            min-height: 380px;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        /* MONITORING SECTIONS */
+        .monitoring-section {
+            margin-top: 30px;
+        }
+
+        /* GRID WILAYAH - 5 BOX SEBARIS */
+        .progress-grid { 
+            display: grid; 
+            grid-template-columns: repeat(5, 1fr); 
+            gap: 15px; 
+            padding-top: 5px;
+        }
+        @media(max-width: 1400px) { .progress-grid { grid-template-columns: repeat(4, 1fr); } }
+        @media(max-width: 1100px) { .progress-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media(max-width: 600px) { .progress-grid { grid-template-columns: 1fr; } }
         
-        .region-card { background: #f8fafb; border: 1px solid #eef2f4; border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 8px; transition: all 0.2s; }
-        .region-card:hover { border-color: var(--bni-teal); background-color: #fff; transform: translateY(-1px); }
-        .region-name { font-weight: 700; color: var(--bni-teal-dark); font-size: 14px; display: flex; justify-content: space-between; }
+        .region-card { 
+            background: #ffffff; 
+            border: 1px solid var(--border-color); 
+            border-radius: 12px; 
+            padding: 16px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 12px; 
+            transition: all 0.2s; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+        .region-card:hover { border-color: var(--bni-teal); transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,0,0,0.05); }
+        .region-name { font-weight: 700; color: var(--bni-teal-dark); font-size: 14.5px; display: flex; justify-content: space-between; align-items: center; gap: 5px;}
         
-        .progress-bar-bg { background-color: #e9ecef; width: 100%; height: 8px; border-radius: 4px; overflow: hidden; position: relative; }
-        .progress-bar-fill { background: linear-gradient(90deg, var(--bni-teal), var(--success-green)); width: 0%; height: 100%; transition: width 0.5s ease; }
-        .region-stats { font-size: 11.5px; color: #666; display: flex; justify-content: space-between; }
+        .progress-bar-bg { background-color: #f1f5f9; width: 100%; height: 8px; border-radius: 6px; overflow: hidden; position: relative; }
+        .progress-bar-fill { background: linear-gradient(90deg, var(--bni-teal), var(--success-green)); width: 0%; height: 100%; border-radius: 6px; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+        .region-stats { font-size: 11.5px; color: #475569; display: flex; justify-content: space-between; }
 
-        .badge-lock-status { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
-        .badge-unlocked { background-color: #e3f2fd; color: #0d47a1; }
-        .badge-locked { background-color: #ffebee; color: #c62828; }
+        .badge-lock-status { font-size: 9.5px; padding: 4px 6px; border-radius: 6px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px;}
+        .badge-unlocked { background-color: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+        .badge-locked { background-color: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+        .badge-empty { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
 
-        .loading { text-align: center; padding: 40px; font-size: 14px; font-weight: bold; color: var(--bni-teal); grid-column: span 3; }
+        .financial-info { 
+            border-top: 1px dashed #e2e8f0; 
+            padding-top: 12px; 
+            font-size: 12px; 
+            color: #334155;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .fin-row { display: flex; justify-content: space-between; }
+        .fin-row span { color: #64748b; }
+        .fin-row strong { color: #0f172a; font-weight: 600; }
+
+        /* VALIDATOR DETAIL PANEL */
+        .validation-info { 
+            padding: 10px; 
+            border-radius: 8px; 
+            font-size: 11.5px; 
+            line-height: 1.6;
+            border: 1px solid transparent;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .validation-info.status-locked { background-color: #f0fdf4; border-color: #dcfce7; color: #166534; }
+        .validation-info.status-empty { background-color: #fef2f2; border-color: #fee2e2; color: #991b1b; }
+        .validation-info.status-open { background-color: #f8fafc; border-color: #e2e8f0; color: #475569; }
+
+        .v-row { display: flex; justify-content: space-between; font-size: 11px; border-bottom: 1px dashed rgba(0,0,0,0.05); padding-bottom: 2px; }
+        .v-row:last-child { border-bottom: none; padding-bottom: 0; }
+        .v-label { opacity: 0.75; }
+        .v-value { font-weight: 600; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+
+        .loading { text-align: center; padding: 40px; font-size: 14px; font-weight: bold; color: var(--bni-teal); grid-column: span 5; }
     </style>
 </head>
 <body>
-
 
 <div class="container">
     <header>
@@ -97,12 +235,10 @@
         <div class="system-date" id="live-date">Memuat Tanggal...</div>
     </header>
 
-
-
-    <div class="portal-grid">
-        <div class="card-panel" style="display: flex; flex-direction: column; justify-content: space-between;">
+    <div class="portal-grid-top">
+        <div class="card-panel" style="display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
             <div>
-                <h2>📌 Panduan Penggunaan Form Konfirmasi Project CAPEX Wil-Cab 2026</h2>
+                <h2>📌 Panduan Penggunaan Form Konfirmasi Project</h2>
                 <div class="timeline-guide">
                     <div class="timeline-item">
                         <h4>Tahap 1: Pengisian Konfirmasi Project</h4>
@@ -110,7 +246,7 @@
                     </div>
                     <div class="timeline-item">
                         <h4>Tahap 2: Manajemen Perubahan Data (Konfirmasi / Drop)</h4>
-                        <p>Sebelum database dikunci, Wilayah/Cabang melakukan konfirmasi apakah project tersebut Berjalan atau Batal, dan Wilayah/Cabang memiliki kewenangan untuk mengubah rincian Usul Perubahan Entitas, Usul Perubahan ENP, Rencana realisasi atau menghapus log konfirmasi terhadap data yang telah diinput konfirmasi sebelumnya.</p>
+                        <p>Sebelum database dikunci, Wilayah/Cabang melakukan konfirmasi apakah project tersebut Berjalan atau Batal, dan memiliki wewenang merubah rincian Usul entitas/ENP.</p>
                     </div>
                     <div class="timeline-item">
                         <h4>Tahap 3: Review Eksekutif Konsolidasi</h4>
@@ -118,7 +254,7 @@
                     </div>
                     <div class="timeline-item">
                         <h4>Tahap 4: Pernyataan Validasi & Kunci Database</h4>
-                        <p>Apabila data project beserta rencana sebaran realisasinya telah cocok, sebagai bentuk komitmen, Wilayah (Setingkat Dept. Head) harus melakukan validasi dan penguncian di halaman <strong>Lembar Validasi</strong>. Maka hak akses edit wilayah otomatis akan ditutup by system.</p>
+                        <p>Apabila data cocok, sebagai bentuk komitmen, Wilayah (Setingkat Dept. Head) wajib melakukan validasi di halaman <strong>Lembar Validasi</strong> untuk mengunci akses edit.</p>
                     </div>
                 </div>
             </div>
@@ -140,195 +276,267 @@
             </div>
         </div>
 
-
-        <div class="card-panel">
-            <h2>🌐 Real-Time Monitoring Progres Konfirmasi Wilayah</h2>
-            <div class="progress-grid" id="region-progress-container">
-                <div class="loading" id="portal-loading">Sinkronisasi database wilayah...</div>
+        <div class="card-panel" style="display: flex; flex-direction: column; box-sizing: border-box;">
+            <h2>📊 Ranking Progress Konfirmasi Wilayah</h2>
+            <div class="chart-wrapper">
+                <canvas id="rankingChart"></canvas>
             </div>
+        </div>
+    </div>
 
+    <div class="card-panel monitoring-section">
+        <h2>
+            <span>🌐 Real-Time Monitoring Progres Wilayah (Grid View)</span>
+            <div class="panel-header-actions">
+                <button type="button" class="btn-action" id="btn-download-jpg">
+                    <span>📸</span> Unduh Grid Box (.jpg)
+                </button>
+            </div>
+        </h2>
+        
+        <div class="progress-grid" id="region-progress-container">
+            <div class="loading" id="portal-loading">Sinkronisasi database wilayah...</div>
         </div>
     </div>
 </div>
 
 <script>
     const API_URL_BASE = "https://script.google.com/macros/s/AKfycbxfvE-fRf3VQy-ViYHQ9ybXI6NWLxFxFOwW-Efnuay_mgJIiGGLjZ_mBBs_sl8b4SPl/exec";
+    let myChartInstance = null;
 
     function setLiveDate() {
         const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
         document.getElementById('live-date').innerText = "🗓️ " + new Date().toLocaleDateString('id-ID', options);
     }
 
-    async function loadPortalDashboardMetrics() {
-    try {
-        const response = await fetch(`${API_URL_BASE}?action=get_data`);
-        const result = await response.json();
-        
-        document.getElementById('portal-loading').style.display = 'none';
-        
-        const projects = result.projects || [];
-        const lockedWilayah = result.lockedWilayah || {};
-        const financialSummary = result.financialSummary || {};
-
-        // 1. Kelompokkan Progres Pengisian Berdasarkan Wilayah
-        let regionMetrics = {};
-        projects.forEach(p => {
-            if (!p.Wilayah || p.Wilayah === "-") return;
-            
-            const cleanProjNum = p.Project_Number ? p.Project_Number.toString().trim() : "";
-            if (cleanProjNum === "" || cleanProjNum === "0") return;
-
-            if (!regionMetrics[p.Wilayah]) {
-                regionMetrics[p.Wilayah] = { total: 0, confirmed: 0 };
-            }
-            
-            regionMetrics[p.Wilayah].total++;
-            if (p.IsConfirmedState === true) {
-                regionMetrics[p.Wilayah].confirmed++;
+    function initChart() {
+        const ctx = document.getElementById('rankingChart').getContext('2d');
+        myChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Progres (%)',
+                    data: [],
+                    backgroundColor: '#006677',
+                    borderRadius: 6,
+                    borderSkipped: false,
+                    barThickness: 12
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) { return ` Progres: ${context.raw}%`; }
+                        }
+                    }
+                },
+                scales: {
+                    x: { min: 0, max: 100, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
+                    y: { grid: { display: false }, ticks: { font: { size: 10, weight: 'bold' } } }
+                }
             }
         });
+    }
 
-        // 2. Render Grid Box Secara Dinamis per Wilayah Kerja
-        const container = document.getElementById('region-progress-container');
-        container.innerHTML = '';
+    async function loadPortalDashboardMetrics() {
+        try {
+            const response = await fetch(`${API_URL_BASE}?action=get_data`);
+            const result = await response.json();
+            
+            document.getElementById('portal-loading').style.display = 'none';
+            
+            const projects = result.projects || [];
+            const lockedWilayah = result.lockedWilayah || {};
+            const financialSummary = result.financialSummary || {};
 
-        const sortedRegions = Object.keys(regionMetrics).sort();
-        
-        if (sortedRegions.length === 0) {
-            container.innerHTML = `<div class="loading" style="color:#aaa;">Tidak ada data wilayah terdistribusi.</div>`;
-            return;
+            let regionMetrics = {};
+            projects.forEach(p => {
+                if (!p.Wilayah || p.Wilayah === "-") return;
+                const cleanProjNum = p.Project_Number ? p.Project_Number.toString().trim() : "";
+                if (cleanProjNum === "" || cleanProjNum === "0") return;
+
+                if (!regionMetrics[p.Wilayah]) {
+                    regionMetrics[p.Wilayah] = { total: 0, confirmed: 0 };
+                }
+                regionMetrics[p.Wilayah].total++;
+                if (p.IsConfirmedState === true) {
+                    regionMetrics[p.Wilayah].confirmed++;
+                }
+            });
+
+            const container = document.getElementById('region-progress-container');
+            container.innerHTML = '';
+
+            let rawListData = Object.keys(regionMetrics).map(reg => {
+                const metric = regionMetrics[reg];
+                const pct = metric.total > 0 ? Math.round((metric.confirmed / metric.total) * 100) : 0;
+                return { name: reg, pct: pct, total: metric.total, confirmed: metric.confirmed };
+            });
+
+            // --- MANAJEMEN URUTAN DATA (SORTING) ---
+            // 1. Salinan Data Khusus untuk Grafik Chart (Urutan Progress Tertinggi/Ranking)
+            let chartData = [...rawListData];
+            chartData.sort((a, b) => b.pct - a.pct || a.name.localeCompare(b.name));
+
+            // 2. Data Utama Diurutkan Ascending Berdasarkan Kode Wilayah (A-Z / W01-W18) untuk Grid Box
+            rawListData.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+
+            if (rawListData.length === 0) {
+                container.innerHTML = `<div class="loading" style="color:#aaa;">Tidak ada data wilayah terdistribusi.</div>`;
+                return;
+            }
+
+            // Update Chart Data Menggunakan chartData yang Terurut Berdasarkan Progress
+            if (myChartInstance) {
+                myChartInstance.data.labels = chartData.map(item => item.name);
+                myChartInstance.data.datasets[0].data = chartData.map(item => item.pct);
+                myChartInstance.data.datasets[0].backgroundColor = chartData.map(item => item.pct === 100 ? '#2e7d32' : '#006677');
+                myChartInstance.update();
+            }
+
+            // Render ke Grid Box Menggunakan rawListData yang Terurut Berdasarkan Nama Wilayah (Ascending)
+            rawListData.forEach(item => {
+                const regKey = item.name.toString().trim().toUpperCase();
+                const finData = financialSummary[regKey] ? financialSummary[regKey] : { enpAwal: 0, totalEnp: 0, totalRbb: 0, totalDrop: 0 };
+                
+                // Pemicu Status BELUM MENGISI: Jika usul penyesuaian ENP DAN usul alokasi RBB masih senilai 0
+                const isTotalZero = (Number(finData.totalEnp) === 0 && Number(finData.totalRbb) === 0);
+                const dropCount = finData.totalDrop || 0;
+                
+                const rawLock = lockedWilayah[regKey];
+                
+                // Cek status lock secara menyeluruh (string/object)
+                let isLocked = false;
+                if (rawLock) {
+                    if (typeof rawLock === 'string' && rawLock.trim().toUpperCase() === 'LOCKED') {
+                        isLocked = true;
+                    } else if (typeof rawLock === 'object') {
+                        const statusCheck = rawLock.Status || rawLock.status || '';
+                        if (statusCheck.toString().trim().toUpperCase() === 'LOCKED') {
+                            isLocked = true;
+                        }
+                    }
+                }
+
+                const lockInfo = rawLock && typeof rawLock === 'object' ? rawLock : {};
+                const vNama = lockInfo.Nama_Validator || lockInfo.nama_validator || lockInfo["Nama Validator"] || lockInfo.nama || "-";
+                const vNpp = lockInfo.NPP || lockInfo.npp || "-";
+                const vJabatan = lockInfo.Jabatan || lockInfo.jabatan || "-";
+                const vWaktu = lockInfo.Timestamp || lockInfo.timestamp || lockInfo.waktu || "-";
+                
+                let statusBadge = "";
+                let validationClass = "status-open";
+                let validatorContentHTML = "";
+
+                if (isLocked) {
+                    statusBadge = `<span class="badge-lock-status badge-locked">🔒 Lengkap</span>`;
+                    validationClass = "status-locked";
+                    validatorContentHTML = `
+                        <div class="v-row"><span class="v-label">Nama:</span><span class="v-value" title="${vNama}">${vNama}</span></div>
+                        <div class="v-row"><span class="v-label">NPP:</span><span class="v-value">${vNpp}</span></div>
+                        <div class="v-row"><span class="v-label">Jabatan:</span><span class="v-value" title="${vJabatan}">${vJabatan}</span></div>
+                        <div class="v-row"><span class="v-label">Waktu:</span><span class="v-value" style="font-size:10px; font-weight:normal;">${vWaktu}</span></div>
+                    `;
+                } else if (isTotalZero) {
+                    statusBadge = `<span class="badge-lock-status badge-empty">🔴 Belum Isi</span>`;
+                    validationClass = "status-empty";
+                    validatorContentHTML = `<div style="text-align:center; font-style:italic; padding:5px 0;">Database log masih kosong.</div>`;
+                } else {
+                    statusBadge = `<span class="badge-lock-status badge-unlocked">🔓 Belum Lengkap</span>`;
+                    validatorContentHTML = `<div style="text-align:center; font-style:italic; padding:5px 0; opacity:0.8;">Menunggu konfirmasi Dept Head.</div>`;
+                }
+
+                const formatToJuta = (num) => {
+                    if (!num || isNaN(num)) return "Rp 0 Jt";
+                    const nilaiJuta = num / 1000000; 
+                    return `Rp ${new Intl.NumberFormat('id-ID', { maximumFractionDigits: 1 }).format(nilaiJuta)} Jt`;
+                };
+
+                const card = document.createElement('div');
+                card.className = 'region-card';
+                card.innerHTML = `
+                    <div class="region-name">
+                        <span><strong>${item.name}</strong></span>
+                        ${statusBadge}
+                    </div>
+                    <div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" style="width: ${item.pct}%"></div>
+                        </div>
+                        <div class="region-stats" style="margin-top: 5px; font-size:11px;">
+                            <span>Progres: <strong>${item.pct}%</strong></span>
+                            <span><strong>${item.confirmed}/${item.total}</strong> Proyek</span>
+                        </div>
+                        <div style="font-size: 11px; margin-top:2px; color: #b91c1c; text-align: right;">
+                             Proyek Di-drop: <strong>${dropCount}</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="financial-info" style="font-size:11.5px;">
+                        <div class="fin-row"><span>ENP Awal:</span><strong>${formatToJuta(finData.enpAwal)}</strong></div>
+                        <div class="fin-row"><span>Penyesuaian ENP:</span><strong>${formatToJuta(finData.totalEnp)}</strong></div>
+                        <div class="fin-row"><span>Alokasi RBB:</span><strong>${formatToJuta(finData.totalRbb)}</strong></div>
+                    </div>
+
+                    <div style="font-size: 10.5px; font-weight: 700; color: var(--bni-teal-dark); margin-top: 5px; margin-bottom: -5px; letter-spacing:0.3px;">
+                        STATUS VALIDASI:
+                    </div>
+
+                    <div class="validation-info ${validationClass}">
+                        ${validatorContentHTML}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+        } catch (e) {
+            document.getElementById('portal-loading').innerText = "Koneksi Sinkronisasi Gagal: " + e.message;
+            document.getElementById('portal-loading').style.color = "red";
         }
-
-        sortedRegions.forEach(reg => {
-    const metric = regionMetrics[reg];
-    const pct = metric.total > 0 ? Math.round((metric.confirmed / metric.total) * 100) : 0;
-    const regKey = reg.toString().trim().toUpperCase();
-
-    // Ambil data finansial (Default jika data kosong)
-    const finData = financialSummary[regKey] ? financialSummary[regKey] : { totalEnp: 0, totalRbb: 0 };
-
-    // Cek apakah total angka finansial semuanya masih 0
-    const isTotalZero = (finData.totalEnp === 0 && finData.totalRbb === 0);
-
-    // Ambil data detail lock validator
-    const lockInfo = lockedWilayah[regKey] && typeof lockedWilayah[regKey] === 'object' 
-        ? lockedWilayah[regKey] 
-        : { status: "OPEN", nama: "-", npp: "-", jabatan: "-", waktu: "-" };
-
-    const isLocked = lockInfo.status === "LOCKED" || lockedWilayah[regKey] === "LOCKED";
-    
-    // 1. MODIFIKASI BADGE STATUS UTAMA
-    let statusBadge = "";
-    if (isLocked) {
-        statusBadge = `<span class="badge badge-lock-status badge-locked">🔒 LOCKED (Valid)</span>`;
-    } else if (isTotalZero) {
-        // Jika belum dikunci DAN angkanya masih 0
-        statusBadge = `<span class="badge badge-lock-status" style="background-color: #FFEAEA; color: black;">🔴 Belum Mengisi</span>`;
-    } else {
-        statusBadge = `<span class="badge badge-lock-status badge-unlocked">🔓 OPEN (Belum Valid)</span>`;
     }
-
-    // Formatter mata uang Juta Rupiah
-    const formatToJuta = (num) => {
-        if (!num || isNaN(num)) return "Rp 0 Juta";
-        const nilaiJuta = num / 1000000; 
-        const formatted = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(nilaiJuta);
-        return `Rp ${formatted} Juta`;
-    };
-
-    const card = document.createElement('div');
-    card.className = 'region-card';
-    card.innerHTML = `
-        <div class="region-name">
-            <span><strong>Entitas: ${reg}</strong></span>
-            ${statusBadge}
-        </div>
-        <div class="progress-bar-bg" style="margin: 8px 0;">
-            <div class="progress-bar-fill" style="width: ${pct}%"></div>
-        </div>
-        <div class="region-stats" style="margin-bottom: 10px; font-weight: 500;">
-            <span>Progres: ${pct}%</span>
-            <strong>${metric.confirmed} / ${metric.total} Proyek</strong>
-        </div>
-        
-        <div class="financial-info" style="border-top: 1px dashed #ccc; padding-top: 8px; font-size: 11.5px; color: #444;">
-            <div style="display:flex; justify-content:space-between; margin-bottom: 3px;">
-                <span>Total Usul ENP:</span> <strong>${formatToJuta(finData.totalEnp)}</strong>
-            </div>
-            <div style="display:flex; justify-content:space-between; margin-bottom: 3px;">
-                <span>Alokasi Revisi RBB:</span> <strong>${formatToJuta(finData.totalRbb)}</strong>
-            </div>
-            <div style="display:flex; justify-content:space-between; margin-bottom: 6px;">
-                <span>Rencana Realisasi:</span> <strong>${formatToJuta(finData.totalRbb)}</strong>
-            </div>
-        </div>
-
-        <div class="validation-info" style="background: ${isLocked ? '#e6f4ea' : (isTotalZero ? '#fdf2f2' : '#f8f9fa')}; padding: 8px; border-radius: 6px; font-size: 11px; margin-top: 6px; border: 1px solid ${isLocked ? '#137333' : (isTotalZero ? '#f5b8b8' : '#dadce0')}; line-height: 1.4;">
-            <div style="color: ${isLocked ? '#137333' : (isTotalZero ? '#b91c1c' : '#666')}; font-weight: bold; margin-bottom: 4px;">
-                ${isLocked ? '🗹 Detail Validator:' : (isTotalZero ? '🔴 Status: Belum Mengisi' : '⏳ Status: Menunggu Validasi')}
-            </div>
-            ${isLocked && lockInfo.nama !== "-" ? `
-                <div><strong>Nama:</strong> ${lockInfo.nama} (${lockInfo.npp})</div>
-                <div><strong>Jabatan:</strong> ${lockInfo.jabatan}</div>
-                <div><strong>Waktu:</strong> ${lockInfo.waktu}</div>
-            ` : (isTotalZero ? `
-                <div style="color: #b91c1c;">Belum ada record input project dari Wilayah ini.</div>
-            ` : `
-                <div style="color: #c26c00; font-style: italic;">Belum dikunci oleh Eksekutif Wilayah.</div>
-            `)}
-        </div>
-    `;
-    container.appendChild(card);
-});
-
-    } catch (e) {
-        document.getElementById('portal-loading').innerText = "Koneksi Sinkronisasi Gagal: " + e.message;
-        document.getElementById('portal-loading').style.color = "red";
-    }
-}
 
     document.addEventListener('DOMContentLoaded', () => {
         setLiveDate();
+        initChart();
         loadPortalDashboardMetrics();
     });
 
-document.getElementById('btn-download-jpg').addEventListener('click', function () {
-    const container = document.getElementById('region-progress-container');
-    
-    // Memberikan feedback visual sementara saat proses capture
-    const originalBtnText = this.innerText;
-    this.innerText = "⏳ Memproses Gambar...";
-    this.disabled = true;
+    document.getElementById('btn-download-jpg').addEventListener('click', function () {
+        const targetArea = document.getElementById('region-progress-container');
+        const originalBtnText = this.innerText;
+        this.innerText = "⏳ Memproses...";
+        this.disabled = true;
 
-    // Pengaturan resolusi dan kompensasi scrollbox (max-height)
-    html2canvas(container, {
-        useCORS: true,          // Mengaktifkan pembacaan aset eksternal jika ada
-        scale: 2,               // Meningkatkan kualitas/resolusi gambar agar tidak pecah (2x)
-        height: container.scrollHeight, // Menangkap seluruh card meskipun terpotong scroll vertikal
-        windowHeight: container.scrollHeight
-    }).then(canvas => {
-        // Mengubah canvas menjadi URL data gambar berformat JPG
-        const image = canvas.toDataURL("image/jpeg", 0.9);
-        
-        // Membuat link download bayangan secara dinamis
-        const link = document.createElement('a');
-        link.download = `Monitoring_Progress_Wilayah_${new Date().toISOString().split('T')[0]}.jpg`;
-        link.href = image;
-        
-        // Memicu aksi download otomatis pada browser
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        // Mengembalikan status tombol
-        document.getElementById('btn-download-jpg').innerText = originalBtnText;
-        document.getElementById('btn-download-jpg').disabled = false;
-    }).catch(err => {
-        alert("Gagal mendownload gambar: " + err.message);
-        document.getElementById('btn-download-jpg').innerText = originalBtnText;
-        document.getElementById('btn-download-jpg').disabled = false;
+        setTimeout(() => {
+            html2canvas(targetArea, {
+                useCORS: true,
+                scale: 2, 
+                backgroundColor: "#f4f7f8"
+            }).then(canvas => {
+                const image = canvas.toDataURL("image/jpeg", 0.95);
+                const link = document.createElement('a');
+                link.download = `BNI_CAPEX_Grid_Box_Progress_${new Date().toISOString().split('T')[0]}.jpg`;
+                link.href = image;
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                this.innerText = originalBtnText;
+                this.disabled = false;
+            }).catch(err => {
+                alert("Gagal mengunduh gambar: " + err.message);
+                this.innerText = originalBtnText;
+                this.disabled = false;
+            });
+        }, 200);
     });
-});
 </script>
 </body>
 </html>
