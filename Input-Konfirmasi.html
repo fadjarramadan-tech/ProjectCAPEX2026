@@ -63,12 +63,15 @@
             background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.05); max-height: 550px; overflow-y: auto; overflow-x: auto; border: 1px solid #e1e8ed;
         }
         table { width: 100%; border-collapse: collapse; text-align: left; }
+        
         th {
-            background-color: #f4f8f9; color: var(--bni-teal-dark); font-weight: 700; padding: 14px 12px; border-bottom: 3px solid #006677; font-size: 13px; position: sticky; top: 0; z-index: 10; box-shadow: inset 0 -1px 0 #006677;
+            background-color: #f4f8f9; color: var(--bni-teal-dark); font-weight: 700; padding: 10px 10px; border-bottom: 3px solid #006677; font-size: 13px; position: sticky; top: 0; z-index: 10; box-shadow: inset 0 -1px 0 #006677;
         }
-        td { padding: 14px 12px; border-bottom: 1px solid #eef2f4; font-size: 13.5px; vertical-align: middle; }
-        tr:hover { background-color: #f7fafb; }
+        td { padding: 8px 10px; border-bottom: 1px solid #eef2f4; font-size: 13px; vertical-align: middle; }
+        tr:nth-child(even) { background-color: #fafdff; }
+        tr:hover { background-color: #f1f6f8 !important; }
         tr.confirmed { background-color: #e8f5e9 !important; }
+        tr.confirmed:hover { background-color: #d0edd3 !important; }
 
         .actions { display: flex; gap: 6px; flex-wrap: wrap; }
         button {
@@ -136,6 +139,7 @@
         </div>
         
         <div class="nav-menu-box">
+            <a href="index.html" class="btn-nav-summary" style="background-color: #4a5568; border: 1px solid rgba(255,255,255,0.2);">📖 Panduan & Progress</a>
             <a href="Rincian-PenyesuaianProject.html" class="btn-nav-summary" style="background-color: var(--bni-teal-dark); border: 1px solid rgba(255,255,255,0.3);">📋 Rincian Penyesuaian</a>
             <a href="summary.html" class="btn-nav-summary">📊 Buka Dashboard Summary</a>
         </div>
@@ -152,27 +156,31 @@
         🔒 DATA WILAYAH INI TELAH DIVALIDASI & DIKUNCI PERMANEN OLEH EKSEKUTIF. AKSES EDITING & DROP DATA DINONAKTIFKAN.
     </div>
 
-    <div class="filter-container" id="filter-wrapper" style="display: none;">
-        <div class="filter-group">
-            <label for="filter-wilayah">Unit Wilayah:</label>
-            <select id="filter-wilayah" onchange="handleWilayahFilterChange()">
-                <option value="ALL">-- Semua Wilayah Kerja --</option>
-            </select>
-        </div>
-        
-        <div class="filter-group">
-            <label for="filter-unit-kerja">Unit Kerja [Entitas]:</label>
-            <select id="filter-unit-kerja" onchange="filterData()">
-                <option value="ALL">-- Semua Unit Kerja --</option>
-            </select>
-        </div>
+    <div class="filter-container" id="filter-wrapper" style="display: none; align-items: flex-end; justify-content: space-between; gap: 15px;">
+        <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center; flex: 1;">
+            <div class="filter-group" style="display: flex; flex-direction: column; align-items: flex-start; gap: 5px;">
+                <label for="filter-wilayah" style="margin-bottom: 2px;">Unit Wilayah:</label>
+                <select id="filter-wilayah" onchange="handleWilayahFilterChange()" style="min-width: 220px; box-sizing: border-box;">
+                    <option value="ALL">-- Semua Wilayah Kerja --</option>
+                </select>
+            </div>
+            
+            <div class="filter-group" style="display: flex; flex-direction: column; align-items: flex-start; gap: 5px;">
+                <label for="filter-unit-kerja" style="margin-bottom: 2px;">Unit Kerja [Entitas]:</label>
+                <select id="filter-unit-kerja" onchange="filterData()" style="min-width: 320px; box-sizing: border-box;">
+                    <option value="ALL">-- Semua Unit Kerja --</option>
+                </select>
+            </div>
 
-        <div class="filter-group" style="margin-left: auto;">
-            <label for="search-project">Pencarian Project:</label>
-            <input type="text" id="search-project" placeholder="Masukkan nomor / nama project..." onkeyup="filterData()">
+            <div class="filter-group" style="display: flex; flex-direction: column; align-items: flex-start; gap: 5px;">
+                <label for="search-project" style="margin-bottom: 2px;">Pencarian Project:</label>
+                <input type="text" id="search-project" placeholder="Masukkan nomor / nama project..." onkeyup="filterData()" style="min-width: 280px; box-sizing: border-box;">
+            </div>
         </div>
         
-        <button id="btn-restore-panel-id" class="btn-restore-panel" onclick="openRestoreModal()">🗑️ Lihat Usulan Project Didrop</button>
+        <div style="display: flex; align-items: center;">
+            <button id="btn-restore-panel-id" class="btn-restore-panel" onclick="openRestoreModal()" style="padding: 11px 16px; height: 42px; font-size: 13px; font-weight: 700; white-space: nowrap; margin: 0; box-sizing: border-box;">🗑️ Lihat Usulan Project Didrop</button>
+        </div>
     </div>
 
     <div id="loading" class="loading">Memuat sirkulasi basis data dari Google Sheets, mohon tunggu...</div>
@@ -184,11 +192,11 @@
                 <tr>
                     <th style="width: 40px; text-align: center;">No</th>
                     <th>Wilayah</th>
-                    <th style="width: 60px;">Entitas</th>
-                    <th>Operating Unit (Unit Kerja)</th>
-                    <th>Project Number</th>
-                    <th style="width: 280px;">Nama Deskripsi Project</th>
-                    <th style="text-align: right; width: 130px;">Alokasi (ENP) (Rp)</th>
+                    <th style="width: 320px;">Unit Kerja [Entitas]</th>
+                    <th style="width: 350px;">Project & Deskripsi</th>
+                    <th style="text-align: right; width: 140px;">Pagu Maks. Anggaran (ENP)</th>
+                    <th style="text-align: right; width: 130px;">Usul Alokasi Revisi RBB 2026 (Rp)</th>
+                    <th style="text-align: right; width: 130px;">Rencana Realisasi (Rp)</th>
                     <th>Remarks</th>
                     <th style="width: 240px; text-align: center;">Aksi</th>
                 </tr>
@@ -330,6 +338,11 @@
     let tempFileData = ""; let tempFileName = ""; let tempFileType = "";
     let globalLockedWilayah = {};
 
+    // State global untuk mengunci ingatan filter halaman saat reload data
+    let savedFilterWilayah = "ALL";
+    let savedFilterUnitKerja = "ALL";
+    let savedSearchValue = "";
+
     function formatRibuan(angka) {
         if (!angka || angka === '-') return '0';
         let num = angka.toString().replace(/[^0-9]/g, '');
@@ -349,46 +362,98 @@
     }
 
     async function fetchData() {
-    const loadingEl = document.getElementById('loading');
-    const errorEl = document.getElementById('error');
-    loadingEl.style.display = 'block';
-    loadingEl.innerText = "Memproses integrasi data, mohon tunggu...";
-    try {
-        const response = await fetch(`${API_URL_BASE}?action=get_data`);
-        if (!response.ok) throw new Error('Gagal memuat respon backend.');
-        const result = await response.json();
-        
-        loadingEl.style.display = 'none';
-        
-        const rawProjects = result.projects || [];
-        globalProjects = rawProjects.filter(p => {
-            if (!p.Project_Number) return false;
-            const trimmed = p.Project_Number.toString().trim();
-            return trimmed !== "" && trimmed !== "0" && trimmed !== "null" && trimmed !== "undefined";
-        });
-
-        globalOutlets = result.outlets || [];
-        globalConfirmedDetails = result.confirmedDetails || {};
-        globalRejectedProjects = result.rejectedProjects || [];
-        
-        globalLockedWilayah = {};
-        if (result.lockedWilayah) {
-            for (let key in result.lockedWilayah) {
-                globalLockedWilayah[key.toString().trim().toUpperCase()] = result.lockedWilayah[key];
+        const loadingEl = document.getElementById('loading');
+        const errorEl = document.getElementById('error');
+        loadingEl.style.display = 'block';
+        loadingEl.innerText = "Memproses integrasi data, mohon tunggu...";
+        try {
+            const response = await fetch(`${API_URL_BASE}?action=get_data`);
+            if (!response.ok) throw new Error('Gagal memuat respon backend.');
+            
+            // Perbaikan Bug 2: Amankan deteksi JSON dari response Apps Script
+            const contentType = response.headers.get("content-type");
+            if (!contentType || !contentType.includes("application/json")) {
+                throw new Error("Respon server bukan berformat JSON yang valid. Silakan coba lagi.");
             }
-        }
-        
-        currentFilteredList = [...globalProjects];
 
-        document.getElementById('filter-wrapper').style.display = 'flex';
-        document.getElementById('table-wrapper').style.display = 'block';
-        
-        populateWilayahFilter(globalProjects);
-    } catch (error) {
-        loadingEl.style.display = 'none'; errorEl.style.display = 'block';
-        errorEl.innerText = `Koneksi Integrasi Gagal: ${error.message}`;
+            const result = await response.json();
+            
+            loadingEl.style.display = 'none';
+            errorEl.style.display = 'none';
+            
+            const rawProjects = result.projects || [];
+            globalProjects = rawProjects.filter(p => {
+                if (!p.Project_Number) return false;
+                const trimmed = p.Project_Number.toString().trim();
+                return trimmed !== "" && trimmed !== "0" && trimmed !== "null" && trimmed !== "undefined";
+            }).sort((a, b) => {
+                // Poin 3: Default Sorting Ascending Berdasarkan Nama Wilayah (A-Z)
+                const wilA = a.Wilayah ? a.Wilayah.toString().toUpperCase() : "";
+                const wilB = b.Wilayah ? b.Wilayah.toString().toUpperCase() : "";
+                return wilA.localeCompare(wilB);
+            });
+            globalOutlets = result.outlets || [];
+            globalConfirmedDetails = result.confirmedDetails || {};
+            globalRejectedProjects = result.rejectedProjects || [];
+            
+            globalLockedWilayah = {};
+            if (result.lockedWilayah) {
+                for (let key in result.lockedWilayah) {
+                    globalLockedWilayah[key.toString().trim().toUpperCase()] = result.lockedWilayah[key];
+                }
+            }
+            
+            currentFilteredList = [...globalProjects];
+
+            document.getElementById('filter-wrapper').style.display = 'flex';
+            document.getElementById('table-wrapper').style.display = 'block';
+            
+            // Mengisi ulang daftar dropdown filter utama
+            populateWilayahFilter(globalProjects);
+            
+            // Perbaikan Bug 3: Terapkan kembali state filter yang disimpan sebelum refresh data
+            applySavedFilters();
+
+        } catch (error) {
+            loadingEl.style.display = 'none'; errorEl.style.display = 'block';
+            errorEl.innerText = `Koneksi Integrasi Gagal: ${error.message}`;
+        }
     }
-}
+
+    function saveCurrentFilterState() {
+        savedFilterWilayah = document.getElementById('filter-wilayah').value;
+        savedFilterUnitKerja = document.getElementById('filter-unit-kerja').value;
+        const searchInput = document.getElementById('search-project');
+        savedSearchValue = searchInput ? searchInput.value : "";
+    }
+
+    function applySavedFilters() {
+        // Terapkan filter wilayah yang tersimpan
+        const filterWilayahSelect = document.getElementById('filter-wilayah');
+        if (Array.from(filterWilayahSelect.options).some(opt => opt.value === savedFilterWilayah)) {
+            filterWilayahSelect.value = savedFilterWilayah;
+        } else {
+            filterWilayahSelect.value = "ALL";
+        }
+
+        // Trigger perubahan untuk mengisi item dropdown Unit Kerja berdasarkan wilayah terpilih
+        handleWilayahFilterChange(true);
+
+        // Terapkan filter unit kerja yang tersimpan
+        const filterUnitSelect = document.getElementById('filter-unit-kerja');
+        if (Array.from(filterUnitSelect.options).some(opt => opt.value === savedFilterUnitKerja)) {
+            filterUnitSelect.value = savedFilterUnitKerja;
+        } else {
+            filterUnitSelect.value = "ALL";
+        }
+
+        // Terapkan search keyword yang tersimpan
+        const searchInput = document.getElementById('search-project');
+        if (searchInput) searchInput.value = savedSearchValue;
+
+        // Eksekusi filtrasi data visual di tabel
+        filterData();
+    }
 
     function updateLiveFilterProgressTracker(filteredData) {
         const totalFiltered = filteredData.length;
@@ -408,10 +473,9 @@
         Array.from(wilayahSet).sort().forEach(w => {
             const opt = document.createElement('option'); opt.value = w; opt.textContent = w; filterSelect.appendChild(opt);
         });
-        handleWilayahFilterChange();
     }
 
-    function handleWilayahFilterChange() {
+    function handleWilayahFilterChange(isRestoringState = false) {
         const selectedWilayah = document.getElementById('filter-wilayah').value;
         const filterUnitKerja = document.getElementById('filter-unit-kerja');
         const unitSet = new Set();
@@ -432,7 +496,10 @@
         });
         
         checkWilayahLockStatus(selectedWilayah);
-        filterData();
+        
+        if (!isRestoringState) {
+            filterData();
+        }
     }
 
     function checkWilayahLockStatus(wilayah) {
@@ -442,7 +509,8 @@
         
         if (wilayah !== "ALL" && globalLockedWilayah[normalizedWilayah] === "LOCKED") {
             banner.style.display = 'block';
-            if(btnRestore) btnRestore.disabled = true;
+            // Perbaikan Bug 1: Tombol Panel Arsip Tetap Aktif / Tidak Dinonaktifkan
+            if(btnRestore) btnRestore.disabled = false; 
         } else {
             banner.style.display = 'none';
             if(btnRestore) btnRestore.disabled = false;
@@ -471,70 +539,89 @@
     }
 
     function renderTable(data) {
-    const container = document.getElementById('data-rows');
-    container.innerHTML = '';
-    
-    data.forEach((item, index) => {
-        const tr = document.createElement('tr');
-        let rowClass = item.IsConfirmedState === true ? 'confirmed' : '';
-        const rowWilayahRaw = item.Wilayah ? item.Wilayah.toString().trim().toUpperCase() : "";
+        const container = document.getElementById('data-rows');
+        container.innerHTML = '';
         
-        let isProjectLocked = false;
-        if (globalLockedWilayah[rowWilayahRaw] === "LOCKED") {
-            isProjectLocked = true;
-        } else {
+        data.forEach((item, index) => {
+            const tr = document.createElement('tr');
+            let rowClass = item.IsConfirmedState === true ? 'confirmed' : '';
+            const rowWilayahRaw = item.Wilayah ? item.Wilayah.toString().trim().toUpperCase() : "";
+            
+            // Cek status kunci wilayah
+            let isProjectLocked = false;
             for (let lockedKey in globalLockedWilayah) {
                 const cleanLockKey = lockedKey.toString().trim().toUpperCase();
-                if (globalLockedWilayah[lockedKey] === "LOCKED") {
+                if (globalLockedWilayah[lockedKey] === "LOCKED" && cleanLockKey !== "") {
                     if (rowWilayahRaw.includes(cleanLockKey) || cleanLockKey.includes(rowWilayahRaw)) {
                         isProjectLocked = true;
                         break;
                     }
                 }
             }
-        }
-        
-        let actionHtml = '';
-        if (isProjectLocked) {
-            actionHtml = `
-                <div class="actions" style="width: 100%;">
-                    <button class="btn-view" style="width:100%; background-color: #6c757d; color: #ffffff; cursor: not-allowed; opacity: 0.65; pointer-events: none;" disabled onclick="openConfirmationModal('${item.Project_Number}', ${index}, true)">🔒 View Detail (Locked)</button>
-                </div>
-            `;
-        } else {
-            actionHtml = item.IsConfirmedState === true ? `
-                <div class="actions">
-                    <button class="btn-view" onclick="openConfirmationModal('${item.Project_Number}', ${index}, true)">View</button>
-                    <button class="btn-edit" onclick="openConfirmationModal('${item.Project_Number}', ${index}, false)">Edit</button>
-                    <button class="btn-delete-confirm" onclick="handleDeleteConfirmation('${item.Project_Number}')">Hapus</button>
-                </div>
-            ` : `
-                <div class="actions">
-                    <button class="btn-reject" onclick="handleDedicatedReject('${item.Project_Number}', ${index})">Drop Project</button>
-                    <button class="btn-confirm" onclick="openConfirmationModal('${item.Project_Number}', ${index}, false)">Konfirmasi</button>
-                </div>
-            `;
-        }
 
-        tr.className = rowClass;
-        tr.innerHTML = `
-            <td style="text-align: center; font-weight: 600; color: #777;">${index + 1}</td>
-            <td>${item.Wilayah}</td>
-            <td>${item.Entitas}</td>
-            <td>${item.Operating_Unit}</td>
-            <td><strong>${item.Project_Number}</strong></td>
-            <td>${item.Nama_Project}</td>
-            <td style="text-align: right; font-weight: 700; color: var(--bni-teal);">${formatRibuan(item.Alokasi_ENP)}</td>
-            <td>${item.Remarks}</td>
-            <td>${actionHtml}</td>
-        `;
-        container.appendChild(tr);
-    });
-}
+            // --- AMBIL DATA DINAMIS DARI HASIL INPUT MODAL ---
+            let rencanaRealisasi = "0";
+            let usulAlokasiRevisi = "0"; // Default langsung di-set ke 0 jika belum dikonfirmasi
+            
+            if (globalConfirmedDetails[item.Project_Number]) {
+                const detail = globalConfirmedDetails[item.Project_Number];
+                rencanaRealisasi = detail.totalRealisasi || "0";
+                usulAlokasiRevisi = rencanaRealisasi; // Mengikuti rencana realisasi jika sudah konfirmasi
+            }
+            
+            let actionHtml = '';
+            if (isProjectLocked) {
+                actionHtml = `
+                    <div class="actions" style="width: 100%;">
+                        <button class="btn-view" style="width:100%; background-color: #6c757d; color: #ffffff; padding: 5px 10px;" onclick="openConfirmationModal('${item.Project_Number}', ${index}, true)">🔒 View Detail</button>
+                    </div>
+                `;
+            } else {
+                actionHtml = item.IsConfirmedState === true ? `
+                    <div class="actions">
+                        <button class="btn-view" style="padding: 5px 10px;" onclick="openConfirmationModal('${item.Project_Number}', ${index}, true)">View</button>
+                        <button class="btn-edit" style="padding: 5px 10px;" onclick="openConfirmationModal('${item.Project_Number}', ${index}, false)">Edit</button>
+                        <button class="btn-delete-confirm" style="padding: 5px 10px;" onclick="handleDeleteConfirmation('${item.Project_Number}')">Hapus</button>
+                    </div>
+                ` : `
+                    <div class="actions">
+                        <button class="btn-reject" style="padding: 5px 10px;" onclick="handleDedicatedReject('${item.Project_Number}', ${index})">Drop</button>
+                        <button class="btn-confirm" style="padding: 5px 10px;" onclick="openConfirmationModal('${item.Project_Number}', ${index}, false)">Konfirmasi</button>
+                    </div>
+                `;
+            }
+
+            tr.className = rowClass;
+            tr.innerHTML = `
+                <td style="text-align: center; font-weight: 600; color: #777;">${index + 1}</td>
+                <td>${item.Wilayah}</td>
+                
+                <td>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="background: #e1f5fe; color: #0288d1; padding: 2px 6px; border-radius: 4px; font-weight: 600; font-size: 11px; white-space: nowrap;">${item.Entitas}</span>
+                        <span style="color: #333; font-weight: 500;">${item.Operating_Unit}</span>
+                    </div>
+                </td>
+                
+                <td>
+                    <div style="font-family: monospace; color: #111111; font-size: 13px; font-weight: 700; background: #eaeff2; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 3px;">${item.Project_Number}</div>
+                    <div style="font-weight: 500; color: #555555; font-size: 13px; line-height: 1.3;">${item.Nama_Project}</div>
+                </td>
+                
+                <td style="text-align: right; font-weight: 500; color: #666;">${formatRibuan(item.Alokasi_ENP)}</td>
+                <td style="text-align: right; font-weight: 700; color: var(--bni-teal);">${formatRibuan(usulAlokasiRevisi)}</td>
+                <td style="text-align: right; font-weight: 700; color: var(--bni-orange);">${formatRibuan(rencanaRealisasi)}</td>
+                <td style="max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${item.Remarks}">${item.Remarks}</td>
+                <td>${actionHtml}</td>
+            `;
+            container.appendChild(tr);
+        });
+    }
 
     async function handleDeleteConfirmation(projectNumber) {
         if(!confirm(`Apakah Anda yakin ingin menghapus LOG HASIL KONFIRMASI untuk project ${projectNumber}?\n\nData project ini akan dikembalikan ke status awal belum dikonfirmasi.`)) return;
 
+        saveCurrentFilterState(); // Simpan state filter saat ini
         document.getElementById('loading').style.display = 'block';
         document.getElementById('loading').innerText = "Sedang menghapus log konfirmasi anggaran...";
 
@@ -566,10 +653,31 @@
         } else {
             globalRejectedProjects.forEach((item, index) => {
                 const tr = document.createElement('tr');
+                
+                // Ambil data wilayah dari baris arsip drop dan bersihkan kodenya
                 const currentWilayah = item.Wilayah ? item.Wilayah.toString().trim().toUpperCase() : "";
-                const isAreaLocked = (globalLockedWilayah[currentWilayah] === "LOCKED");
+                
+                // Cek apakah wilayah ini sudah divalidasi / LOCKED oleh Eksekutif
+                let isAreaLocked = false;
+                if (globalLockedWilayah[currentWilayah] === "LOCKED") {
+                    isAreaLocked = true;
+                } else {
+                    // Pengecekan alternatif jika ada variasi nama string wilayah di object lock
+                    for (let lockedKey in globalLockedWilayah) {
+                        const cleanLockKey = lockedKey.toString().trim().toUpperCase();
+                        if (globalLockedWilayah[lockedKey] === "LOCKED" && cleanLockKey !== "") {
+                            if (currentWilayah.includes(cleanLockKey) || cleanLockKey.includes(currentWilayah)) {
+                                isAreaLocked = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // JIKA WILAYAH TERKUNCI: Ubah tombol pulihkan menjadi label teks ter-lock (Aksi dinonaktifkan)
+                // JIKA WILAYAH AKTIF: Tampilkan tombol pulihkan hijau seperti biasa
                 const btnRestoreHtml = isAreaLocked ? 
-                    `<span style="color:#aaa; font-style:italic; font-size:11px;">🔒 Locked</span>` : 
+                    `<span style="color:var(--danger-red); font-style:italic; font-weight:600; font-size:12px;">🔒 Locked</span>` : 
                     `<button class="btn-execute-restore" onclick="executeProjectRestore('${item.Project_Number}')">Pulihkan</button>`;
 
                 tr.innerHTML = `
@@ -592,6 +700,8 @@
 
     async function executeProjectRestore(projectNumber) {
         if(!confirm(`Apakah Anda yakin ingin memulihkan Project Number ${projectNumber} kembali ke monitor utama?`)) return;
+        
+        saveCurrentFilterState(); // Simpan state filter saat ini
         closeRestoreModal();
         document.getElementById('loading').style.display = 'block'; document.getElementById('loading').innerText = "Sedang memproses pemulihan data project...";
         try {
@@ -605,11 +715,7 @@
     function openConfirmationModal(projectNumber, displayIndex, isViewOnly = false) {
         const item = globalProjects.find(p => p.Project_Number === projectNumber); if (!item) return;
         
-        const currentWilayah = item.Wilayah ? item.Wilayah.toString().trim().toUpperCase() : "";
-        if (globalLockedWilayah[currentWilayah] === "LOCKED") {
-            isViewOnly = true;
-        }
-
+        // Perbaikan Bug 1: Tidak memaksa isViewOnly menjadi true walaupun wilayah ter-lock
         document.getElementById('modal-project-number-id').value = projectNumber; document.getElementById('modal-row-display-index').value = displayIndex;
         document.getElementById('text-wilayah').innerText = item.Wilayah; document.getElementById('text-proj-num').innerText = item.Project_Number; document.getElementById('text-proj-name').innerText = item.Nama_Project;
         document.getElementById('text-entitas-ou').innerText = `${item.Entitas} / ${item.Operating_Unit}`; document.getElementById('text-alokasi').innerText = formatRibuan(item.Alokasi_ENP); document.getElementById('text-remarks').innerText = item.Remarks;
@@ -625,7 +731,7 @@
         if(globalConfirmedDetails[projectNumber]) {
             const detail = globalConfirmedDetails[projectNumber];
             if (isViewOnly) {
-                document.getElementById('modal-title-label').innerText = "Detail Arsip Validasi Investasi (Read-Only/Locked)"; toggleAllFormFields(true); document.getElementById('btn-submit-modal').style.display = 'none';
+                document.getElementById('modal-title-label').innerText = "Detail Arsip Validasi Investasi (Read-Only)"; toggleAllFormFields(true); document.getElementById('btn-submit-modal').style.display = 'none';
             } else {
                 document.getElementById('modal-title-label').innerText = "Form Review & Validasi Anggaran Investasi (Edit Mode)"; toggleAllFormFields(false); document.getElementById('btn-submit-modal').style.display = 'inline-flex';
             }
@@ -693,6 +799,8 @@
         const item = globalProjects.find(p => p.Project_Number === projectNumber); if(!item) return;
         let reason = prompt(`Apakah Anda yakin ingin MENOLAK & MENGHAPUS project ini?\nTulis alasan penolakan / nama konfirmator:`);
         if (reason === null) return; if (!reason.trim()) { alert("Alasan penolakan wajib diisi!"); return; }
+        
+        saveCurrentFilterState(); // Simpan state filter sebelum eksekusi drop
         document.getElementById('loading').style.display = 'block'; document.getElementById('loading').innerText = "Memproses pemindahan berkas ke arsip penolakan...";
         try {
             let formData = new URLSearchParams(); formData.append('action', 'reject_project'); formData.append('ProjectNumber', item.Project_Number); formData.append('Wil', item.Wilayah); formData.append('Entitas', item.Entitas); formData.append('OperatingUnit', item.Operating_Unit); formData.append('NamaProject', item.Nama_Project); formData.append('AlokasiValue', cleanNumber(item.Alokasi_ENP)); formData.append('RemarksValue', item.Remarks); formData.append('UserKonfirmator', reason);
@@ -703,7 +811,10 @@
 
     async function submitModalForm(event) {
         event.preventDefault(); const projNumId = document.getElementById('modal-project-number-id').value; const userKonfirmator = document.getElementById('input-user-konfirmator').value;
-        if (!userKonfirmator.trim()) { alert("Mohon masukkan nama lengkap / NPP Pemeriksa!"); return; } executeIframeFormPOST(projNumId);
+        if (!userKonfirmator.trim()) { alert("Mohon masukkan nama lengkap / NPP Pemeriksa!"); return; } 
+        
+        saveCurrentFilterState(); // Simpan state filter saat ini sebelum simpan konfirmasi form
+        executeIframeFormPOST(projNumId);
     }
 
     function executeIframeFormPOST(projNumId) {
