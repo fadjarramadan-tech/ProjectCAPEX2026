@@ -56,10 +56,23 @@
         .btn-action { background-color: var(--bni-teal); color: white; padding: 8px 14px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 12.5px; }
         .btn-action:hover { background-color: var(--bni-teal-dark); }
 
-        .scrollable-x { overflow-x: auto; border: 1px solid #e1e8ed; border-radius: 8px; margin-top: 10px; }
-        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12px; min-width: 1900px; }
+        /* FREEZE HEADER COMPONENT STYLE */
+        .scrollable-x { 
+            overflow-x: auto; 
+            overflow-y: auto; 
+            max-height: 680px; 
+            border: 1px solid #e1e8ed; 
+            border-radius: 8px; 
+            margin-top: 10px; 
+            position: relative;
+        }
         
-        th { background-color: #f4f8f9; color: var(--bni-teal-dark); font-weight: 700; padding: 10px 8px; border-bottom: 2px solid #006677; border-right: 1px solid #e1e8ed; text-align: center; }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12px; min-width: 1950px; }
+        
+        thead tr:nth-child(1) th { position: sticky; top: 0; z-index: 11; background-color: #f4f8f9; }
+        thead tr:nth-child(2) th { position: sticky; top: 38px; z-index: 10; background-color: #f4f8f9; }
+
+        th { color: var(--bni-teal-dark); font-weight: 700; padding: 10px 8px; border-bottom: 2px solid #006677; border-right: 1px solid #e1e8ed; text-align: center; }
         th.clickable-q { cursor: pointer; transition: background-color 0.2s; }
         th.clickable-q:hover { background-color: #e0f2f1; color: var(--bni-orange); }
         
@@ -75,9 +88,12 @@
         .badge { padding: 3px 6px; border-radius: 4px; font-size: 10.5px; font-weight: bold; }
         .badge-suited { background-color: #e8f5e9; color: #256029; }
         .badge-revised { background-color: #fff8e1; color: #b78103; }
+        .badge-dropped { background-color: #ffebee; color: #c62828; }
+        .badge-active { background-color: #e8f5e9; color: #2e7d32; }
+        .badge-inactive { background-color: #efebe9; color: #37474f; }
 
         .loading { text-align: center; padding: 5px; font-size: 14px; font-weight: bold; color: var(--bni-teal); }
-        .toggle-icon { display: inline-block; width: 15px; text-align: center; margin-right: 5px; font-family: monospace; margin-left: 5px; }
+        .toggle-icon { display: inline-block; width: 15px; text-align: center; margin-right: 5px; font-family: monospace; }
     </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -152,6 +168,7 @@
                         <th rowspan="2" style="width: 280px;">Project & Nama Project</th>
                         <th rowspan="2" style="text-align: right;">Plafon ENP Usulan (Rp)</th>
                         <th rowspan="2" style="text-align: center;">Status ENP</th>
+                        <th rowspan="2" style="text-align: center;">Status Project</th>
                         <th rowspan="2" style="text-align: right; background-color: #e3f2fd;">Usulan Alokasi RBB (Rp)</th>
                         
                         <th colspan="4" class="clickable-q" id="th-q1" onclick="toggleQuarterColumns('q1')">Triwulan I (Q1) ▾</th>
@@ -195,17 +212,36 @@
 
             const projects = result.projects || [];
             const details = result.confirmedDetails || {};
+            const rejected = result.rejectedProjects || [];
 
-            globalConfirmedData = projects
+            let activeMapped = projects
                 .filter(p => p.IsConfirmedState === true)
                 .map(p => {
-                    return { base: p, detail: details[p.Project_Number] || null };
-                })
-                .sort((a, b) => {
-                    let wilA = (a.base.Wilayah || "").toString().toUpperCase();
-                    let wilB = (b.base.Wilayah || "").toString().toUpperCase();
-                    return wilA.localeCompare(wilB);
+                    let d = details[p.Project_Number] || null;
+                    if(d) { d.projectStatus = "Aktif"; }
+                    return { base: p, detail: d };
                 });
+
+            let rejectedMapped = rejected.map(r => {
+                return {
+                    base: { Wilayah: r.Wilayah, Project_Number: r.Project_Number, Nama_Project: r.Nama_Project },
+                    detail: {
+                        entitas: r.Entitas,
+                        operatingUnit: r.Operating_Unit,
+                        alokasiValue: parseFloat(r.Alokasi_ENP || 0),
+                        alokasiStatus: "Dropped",
+                        projectStatus: "Non Aktif",
+                        totalRealisasi: 0,
+                        months: { jan:0, feb:0, mar:0, apr:0, mei:0, jun:0, jul:0, aug:0, sep:0, oct:0, nov:0, dec:0 }
+                    }
+                };
+            });
+
+            globalConfirmedData = activeMapped.concat(rejectedMapped).sort((a, b) => {
+                let wilA = (a.base.Wilayah || "").toString().toUpperCase();
+                let wilB = (b.base.Wilayah || "").toString().toUpperCase();
+                return wilA.localeCompare(wilB);
+            });
 
             populateFilters();
         } catch(e) {
@@ -292,7 +328,7 @@
         tbody.innerHTML = '';
 
         if(data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="19" style="text-align:center; padding:30px; font-weight:bold; color:#888;">Data tidak ditemukan.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="24" style="text-align:center; padding:30px; font-weight:bold; color:#888;">Data tidak ditemukan.</td></tr>`;
             return;
         }
 
@@ -322,12 +358,13 @@
             hierarchy[wil].units[unitKey].projects.push(item);
         });
 
-        // 1. GRAND TOTAL ROW
+        // 1. GRAND TOTAL ROW (Colspan Terhitung 6 Sesuai Jumlah Kolom Awal)
         let trGrand = document.createElement('tr');
         trGrand.className = 'grand-total-row';
         trGrand.innerHTML = `
             <td colspan="3" style="text-align:center; font-weight:bold;">GRAND TOTAL - ALL WILAYAH</td>
             <td style="text-align:right;">${formatRibuan(globalTotals.enpUsulan)}</td>
+            <td></td>
             <td></td>
             <td style="text-align:right; font-weight:bold; color:var(--bni-orange); background-color:#fff3e0;">${formatRibuan(globalTotals.revRbb)}</td>
             <td class="col-q1">${formatRibuan(globalTotals.jan)}</td><td class="col-q1">${formatRibuan(globalTotals.feb)}</td><td class="col-q1">${formatRibuan(globalTotals.mar)}</td>
@@ -356,12 +393,13 @@
                 <td colspan="3"><span class="toggle-icon">${collapsedGroups[idWilayah] ? '▼' : '▶'}</span> <strong>Wilayah Kerja: ${wilayah}</strong></td>
                 <td style="text-align:right; font-weight:bold;">${formatRibuan(wTot.enpUsulan)}</td>
                 <td></td>
+                <td></td>
                 <td style="text-align:right; font-weight:bold; color:var(--bni-teal-dark); background-color:#b2dfdb;">${formatRibuan(wTot.revRbb)}</td>
                 <td class="col-q1">${formatRibuan(wTot.jan)}</td><td class="col-q1">${formatRibuan(wTot.feb)}</td><td class="col-q1">${formatRibuan(wTot.mar)}</td>
                 <td class="quarter-col">${formatRibuan(wTot.q1)}</td>
                 <td class="col-q2">${formatRibuan(wTot.apr)}</td><td class="col-q2">${formatRibuan(wTot.mei)}</td><td class="col-q2">${formatRibuan(wTot.jun)}</td>
                 <td class="quarter-col">${formatRibuan(wTot.q2)}</td>
-                <td class="col-q3">${formatRibuan(wTot.jul)}</td><td class="col-q3">${formatRibuan(wTot.aug)}</td><td class="col-q3">${formatRibuan(wTot.dec)}</td>
+                <td class="col-q3">${formatRibuan(wTot.jul)}</td><td class="col-q3">${formatRibuan(wTot.aug)}</td><td class="col-q3">${formatRibuan(wTot.sep)}</td>
                 <td class="quarter-col">${formatRibuan(wTot.q3)}</td>
                 <td class="col-q4">${formatRibuan(wTot.oct)}</td><td class="col-q4">${formatRibuan(wTot.nov)}</td><td class="col-q4">${formatRibuan(wTot.dec)}</td>
                 <td class="quarter-col">${formatRibuan(wTot.q4)}</td>
@@ -384,12 +422,13 @@
                     <td colspan="3" style="padding-left:25px;"><span class="toggle-icon">${collapsedGroups[idUnit] ? '▼' : '▶'}</span> Unit Kerja: ${unitKey}</td>
                     <td style="text-align:right; font-weight:bold;">${formatRibuan(uTot.enpUsulan)}</td>
                     <td></td>
+                    <td></td>
                     <td style="text-align:right; font-weight:bold; color:var(--bni-teal-dark); background-color:#e0f2f1;">${formatRibuan(uTot.revRbb)}</td>
                     <td class="col-q1">${formatRibuan(uTot.jan)}</td><td class="col-q1">${formatRibuan(uTot.feb)}</td><td class="col-q1">${formatRibuan(uTot.mar)}</td>
                     <td class="quarter-col">${formatRibuan(uTot.q1)}</td>
                     <td class="col-q2">${formatRibuan(uTot.apr)}</td><td class="col-q2">${formatRibuan(uTot.mei)}</td><td class="col-q2">${formatRibuan(uTot.jun)}</td>
                     <td class="quarter-col">${formatRibuan(uTot.q2)}</td>
-                    <td class="col-q3">${formatRibuan(uTot.jul)}</td><td class="col-q3">${formatRibuan(uTot.aug)}</td><td class="col-q3">${formatRibuan(uTot.dec)}</td>
+                    <td class="col-q3">${formatRibuan(uTot.jul)}</td><td class="col-q3">${formatRibuan(uTot.aug)}</td><td class="col-q3">${formatRibuan(uTot.sep)}</td>
                     <td class="quarter-col">${formatRibuan(uTot.q3)}</td>
                     <td class="col-q4">${formatRibuan(uTot.oct)}</td><td class="col-q4">${formatRibuan(uTot.nov)}</td><td class="col-q4">${formatRibuan(uTot.dec)}</td>
                     <td class="quarter-col">${formatRibuan(uTot.q4)}</td>
@@ -398,38 +437,45 @@
                 tbody.appendChild(trUnit);
 
                 // 4. DETAIL DATA ROW
-                hierarchy[wilayah].units[unitKey].projects.forEach(item => {
-                    const det = item.detail;
-                    const comp = item.computed;
-                    let tr = document.createElement('tr');
-                    tr.className = `detail-row ${idWilayah} ${idUnit}`;
-                    tr.style.display = (collapsedGroups[idWilayah] && collapsedGroups[idUnit]) ? '' : 'none';
+                // INDEKS KOLOM DETAIL DATA ROW PADA TABEL FRONTEND WEB
+hierarchy[wilayah].units[unitKey].projects.forEach(item => {
+    const det = item.detail;
+    const comp = item.computed;
 
-                    let statusBadge = det.alokasiStatus === 'Sesuai' ? 
-                        `<span class="badge badge-suited">Sesuai</span>` : `<span class="badge badge-revised">Penyesuaian</span>`;
+    let statusBadge = det.alokasiStatus === 'Sesuai' ? 
+        `<span class="badge badge-suited">Sesuai</span>` : 
+        (det.alokasiStatus === 'Dropped' ? `<span class="badge badge-dropped">Dropped</span>` : `<span class="badge badge-revised">Penyesuaian</span>`);
 
-                    tr.innerHTML = `
-                        <td>${item.base.Wilayah}</td>
-                        <td>[${det.entitas}] ${det.operatingUnit}</td>
-                        <td>
-                            <div style="font-weight: 700; color: var(--bni-teal-dark); margin-bottom: 2px;">${item.base.Project_Number}</div>
-                            <div style="color: #666; font-size: 11px; line-height: 1.3;">${item.base.Nama_Project}</div>
-                        </td>
-                        <td style="text-align:right; font-weight:600;">${formatRibuan(comp.enpUsulan)}</td>
-                        <td style="text-align:center;">${statusBadge}</td>
-                        <td style="text-align:right; font-weight:700; color:var(--bni-teal); background-color:#f0f7f7;">${formatRibuan(comp.usulRevisisRbb)}</td>
-                        <td class="col-q1">${formatRibuan(det.months.jan)}</td><td class="col-q1">${formatRibuan(det.months.feb)}</td><td class="col-q1">${formatRibuan(det.months.mar)}</td>
-                        <td class="quarter-col">${formatRibuan(comp.q1)}</td>
-                        <td class="col-q2">${formatRibuan(det.months.apr)}</td><td class="col-q2">${formatRibuan(det.months.mei)}</td><td class="col-q2">${formatRibuan(det.months.jun)}</td>
-                        <td class="quarter-col">${formatRibuan(comp.q2)}</td>
-                        <td class="col-q3">${formatRibuan(det.months.jul)}</td><td class="col-q3">${formatRibuan(det.months.aug)}</td><td class="col-q3">${formatRibuan(comp.sep)}</td>
-                        <td class="quarter-col">${formatRibuan(comp.q3)}</td>
-                        <td class="col-q4">${formatRibuan(det.months.oct)}</td><td class="col-q4">${formatRibuan(det.months.nov)}</td><td class="col-q4">${formatRibuan(det.months.dec)}</td>
-                        <td class="quarter-col">${formatRibuan(comp.q4)}</td>
-                        <td style="text-align:right; font-weight:700; color:var(--success-green); background-color:#f4fbf4;">${formatRibuan(comp.usulRevisisRbb)}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
+    let projStatusBadge = det.projectStatus === 'Aktif' ? 
+        `<span class="badge badge-active">Aktif</span>` : `<span class="badge badge-inactive">Non Aktif</span>`;
+
+    let tr = document.createElement('tr');
+    tr.className = `detail-row ${idWilayah} ${idUnit}`;
+    tr.style.display = (collapsedGroups[idWilayah] && collapsedGroups[idUnit]) ? '' : 'none';
+
+    tr.innerHTML = `
+        <td>${item.base.Wilayah}</td>
+        <td>[${det.entitas}] ${det.operatingUnit}</td>
+        <td>
+            <div style="font-size: 10.5px; color: #7f8c8d; font-weight: 600; margin-bottom: 1px; font-family: monospace;">${item.base.Project_Number}</div>
+            <div style="font-size: 13px; font-weight: 700; color: var(--bni-teal-dark); line-height: 1.35;">${item.base.Nama_Project}</div>
+        </td>
+        <td style="text-align:right; font-weight:600;">${formatRibuan(comp.enpUsulan)}</td>
+        <td style="text-align:center;">${statusBadge}</td>
+        <td style="text-align:center;">${projStatusBadge}</td>
+        <td style="text-align:right; font-weight:700; color:var(--bni-teal); background-color:#f0f7f7;">${formatRibuan(comp.usulRevisisRbb)}</td>
+        <td class="col-q1">${formatRibuan(det.months.jan)}</td><td class="col-q1">${formatRibuan(det.months.feb)}</td><td class="col-q1">${formatRibuan(det.months.mar)}</td>
+        <td class="quarter-col">${formatRibuan(comp.q1)}</td>
+        <td class="col-q2">${formatRibuan(det.months.apr)}</td><td class="col-q2">${formatRibuan(det.months.mei)}</td><td class="col-q2">${formatRibuan(det.months.jun)}</td>
+        <td class="quarter-col">${formatRibuan(comp.q2)}</td>
+        <td class="col-q3">${formatRibuan(det.months.jul)}</td><td class="col-q3">${formatRibuan(det.months.aug)}</td><td class="col-q3">${formatRibuan(comp.sep)}</td>
+        <td class="quarter-col">${formatRibuan(comp.q3)}</td>
+        <td class="col-q4">${formatRibuan(det.months.oct)}</td><td class="col-q4">${formatRibuan(det.months.nov)}</td><td class="col-q4">${formatRibuan(det.months.dec)}</td>
+        <td class="quarter-col">${formatRibuan(comp.q4)}</td>
+        <td style="text-align:right; font-weight:700; color:var(--success-green); background-color:#f4fbf4;">${formatRibuan(comp.usulRevisisRbb)}</td>
+    `;
+    tbody.appendChild(tr);
+});
             }
         }
     }
@@ -485,121 +531,219 @@
         filterAndRender();
     }
 
+    // =========================================================================
+    // FEATURE 1: DOWNLOAD EXCEL (.xlsx) - SATUAN RP JUTA & HEADERS PRESISI
+    // =========================================================================
     function exportToExcel() {
         const wb = XLSX.utils.book_new();
+        
+        // 1. Judul Atas Dokumen
+        const selectedWilDropdown = document.getElementById('filter-summary-wilayah').value.trim().toUpperCase();
+        let labelWilayah = selectedWilDropdown !== 'ALL' ? `WILAYAH ${selectedWilDropdown}` : "SELURUH WILAYAH KONSOLIDASI";
+        
         const titleData = [
             ["SUMMARY EXECUTIVE HASIL KONFIRMASI"],
             ["Sistem Pelaporan Realisasi Anggaran Terkonsolidasi 2026"],
-            ["Waktu Ekspor: " + new Date().toLocaleString('id-ID')],
-            []
+            [`Ruang Lingkup: ${labelWilayah} (Dalam Satuan Juta Rupiah / Rp Juta)`],
+            ["Waktu Ekspor: " + new Date().toLocaleString('id-ID') + " WIB"],
+            [] // Baris kosong pembatas
         ];
-        const table = document.getElementById("summary-main-table");
-        const rows = Array.from(table.rows);
-        const tableData = rows.map(row => {
-            return Array.from(row.cells).map(cell => cell.innerText.replace(/[▼▶]/g, '').trim());
-        });
-        const finalData = titleData.concat(tableData);
-        const ws = XLSX.utils.aoa_to_sheet(finalData);
-        ws['!merges'] = [
-            { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } },
-            { s: { r: 1, c: 0 }, e: { r: 1, c: 4 } }
+
+        // 2. Baris Header Tabel Excel (2 Baris Bertingkat)
+        const headerRow1 = [
+            'Wilayah', 'Entitas - Operating Unit', 'Project & Nama Project', 
+            'Plafon ENP Usulan (Juta Rp)', 'Status ENP', 'Status Project', 'Usulan Alokasi RBB (Juta Rp)',
+            'Jan', 'Feb', 'Mar', 'Total Q1', 'Apr', 'Mei', 'Jun', 'Total Q2',
+            'Jul', 'Aug', 'Sep', 'Total Q3', 'Oct', 'Nov', 'Des', 'Total Q4', 'Total Rencana Realisasi (Juta Rp)'
         ];
-        XLSX.utils.book_append_sheet(wb, ws, "Summary Executive");
-        XLSX.writeFile(wb, "Summary_Executive_CAPEX_2026.xlsx");
-    }
-
-   // =========================================================================
-    // FITUR UTAMA: DOWNLOAD PDF (PROGRAMMATIC DATA ARRAYS - ANTI BERANTAKAN)
-    // =========================================================================
-    async function exportToPDF() {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('l', 'mm', 'a3'); // Kertas A3 Landscape agar muat horizontal
-
-        // 1. HEADER DOKUMEN CORPORATE STYLE
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(22);
-        doc.setTextColor(0, 77, 90); // BNI Teal Dark
-        doc.text("SUMMARY EXECUTIVE HASIL KONFIRMASI", 15, 18);
         
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(11);
-        doc.setTextColor(102, 102, 102);
-        doc.text("Sistem Pelaporan Realisasi Anggaran Terkonsolidasi 2026 (Dalam Satuan Juta Rupiah / Rp Juta)", 15, 26);
-        doc.text("Waktu Cetak: " + new Date().toLocaleString('id-ID') + " WIB", 15, 32);
+        const headerRow2 = [
+            '', '', '', '', '', '', '',
+            '', '', '', '', '', '', '', '',
+            '', '', '', '', '', '', '', '', ''
+        ];
 
-        doc.setDrawColor(229, 114, 0); // BNI Orange Line
-        doc.setLineWidth(1.2);
-        doc.line(15, 36, doc.internal.pageSize.width - 15, 36);
+        let excelRows = titleData.concat([headerRow1, headerRow2]);
 
-        // 2. REKONSTRUKSI DATA TABEL SECARA MANDIRI (BYPASS DOM HTML BUGS)
-        // Definisikan Header Bertingkat yang Bersih untuk PDF
-        const pdfHeaders = [[
-            'Wilayah', 
-            'Entitas - Operating Unit', 
-            'Project & Nama Project', 
-            'Plafon ENP Usulan', 
-            'Status ENP', 
-            'Usulan Alokasi RBB',
-            'Jan', 'Feb', 'Mar', 'Total Q1',
-            'Apr', 'Mei', 'Jun', 'Total Q2',
-            'Jul', 'Aug', 'Sep', 'Total Q3',
-            'Oct', 'Nov', 'Des', 'Total Q4',
-            'Total Rencana Realisasi'
-        ]];
-
-        let pdfBody = [];
-        let rowStylesMap = {}; // Menyimpan informasi baris untuk pewarnaan dinamis
-
-        // Fungsi pembantu konversi nilai ke satuan Juta Bulat
         const keJutaValue = (num) => {
             let val = parseFloat(num || 0);
-            return isNaN(val) ? 0 : Math.round(val / 1000000);
+            return isNaN(val) ? 0 : Math.round(val / 1);
         };
 
-        // Kumpulkan data persis seperti algoritma hierarki pohon di layar web
+        // 3. Rekonstruksi Hierarki Data Secara Programmatic (Sama Persis dengan PDF)
         if (currentFilteredData && currentFilteredData.length > 0) {
             let hierarchy = {};
-            let globalTotals = { enpUsulan:0, jan:0, feb:0, mar:0, apr:0, mei:0, jun:0, jul:0, aug:0, sep:0, oct:0, nov:0, dec:0, q1:0, q2:0, q3:0, q4:0, revRbb:0 };
+            let globalTotals = createEmptyTotalObject();
 
-            // Langkah A: Kalkulasi Akumulasi angka
             currentFilteredData.forEach(item => {
                 let wil = item.base.Wilayah;
                 let unitKey = `[${item.detail.entitas}] ${item.detail.operatingUnit}`;
-                
-                if (!hierarchy[wil]) hierarchy[wil] = { totals: { enpUsulan:0, jan:0, feb:0, mar:0, apr:0, mei:0, jun:0, jul:0, aug:0, sep:0, oct:0, nov:0, dec:0, q1:0, q2:0, q3:0, q4:0, revRbb:0 }, units: {} };
-                if (!hierarchy[wil].units[unitKey]) hierarchy[wil].units[unitKey] = { totals: { enpUsulan:0, jan:0, feb:0, mar:0, apr:0, mei:0, jun:0, jul:0, aug:0, sep:0, oct:0, nov:0, dec:0, q1:0, q2:0, q3:0, q4:0, revRbb:0 }, projects: [] };
+                if (!hierarchy[wil]) hierarchy[wil] = { totals: createEmptyTotalObject(), units: {} };
+                if (!hierarchy[wil].units[unitKey]) hierarchy[wil].units[unitKey] = { totals: createEmptyTotalObject(), projects: [] };
                 
                 const det = item.detail;
                 let enpUsulan = parseFloat(det.alokasiValue || 0);
-                let revRbb = parseFloat(det.totalRealisasi || 0);
+                let usulRevisisRbb = parseFloat(det.totalRealisasi || 0);
                 let q1 = parseFloat(det.months.jan||0) + parseFloat(det.months.feb||0) + parseFloat(det.months.mar||0);
                 let q2 = parseFloat(det.months.apr||0) + parseFloat(det.months.mei||0) + parseFloat(det.months.jun||0);
                 let q3 = parseFloat(det.months.jul||0) + parseFloat(det.months.aug||0) + parseFloat(det.months.sep||0);
                 let q4 = parseFloat(det.months.oct||0) + parseFloat(det.months.nov||0) + parseFloat(det.months.dec||0);
 
-                const addTotals = (obj) => {
-                    obj.enpUsulan += enpUsulan; obj.revRbb += revRbb;
-                    obj.jan += parseFloat(det.months.jan||0); obj.feb += parseFloat(det.months.feb||0); obj.mar += parseFloat(det.months.mar||0);
-                    obj.apr += parseFloat(det.months.apr||0); obj.mei += parseFloat(det.months.mei||0); obj.jun += parseFloat(det.months.jun||0);
-                    obj.jul += parseFloat(det.months.jul||0); obj.aug += parseFloat(det.months.aug||0); obj.sep += parseFloat(det.months.sep||0);
-                    obj.oct += parseFloat(det.months.oct||0); obj.nov += parseFloat(det.months.nov||0); obj.dec += parseFloat(det.months.dec||0);
-                    obj.q1 += q1; obj.q2 += q2; obj.q3 += q3; obj.q4 += q4;
-                };
-
-                addTotals(hierarchy[wil].units[unitKey].totals);
-                addTotals(hierarchy[wil].totals);
-                addTotals(globalTotals);
+                accumulateTotals(hierarchy[wil].units[unitKey].totals, item, det, enpUsulan, q1, q2, q3, q4, usulRevisisRbb);
+                accumulateTotals(hierarchy[wil].totals, item, det, enpUsulan, q1, q2, q3, q4, usulRevisisRbb);
+                accumulateTotals(globalTotals, item, det, enpUsulan, q1, q2, q3, q4, usulRevisisRbb);
 
                 hierarchy[wil].units[unitKey].projects.push(item);
             });
 
-            // Langkah B: Dorong ke PDF Body Array & Berikan Tanda Tipe Baris
-            // 1. GRAND TOTAL ROW
-            let grandIndex = pdfBody.length;
-            rowStylesMap[grandIndex] = 'grand';
+            // A. Add GRAND TOTAL Row
+            excelRows.push([
+                'GRAND TOTAL', 'ALL WILAYAH', 'KONSOLIDASI NASIONAL', keJutaValue(globalTotals.enpUsulan), '', '', keJutaValue(globalTotals.revRbb),
+                keJutaValue(globalTotals.jan), keJutaValue(globalTotals.feb), keJutaValue(globalTotals.mar), keJutaValue(globalTotals.q1),
+                keJutaValue(globalTotals.apr), keJutaValue(globalTotals.mei), keJutaValue(globalTotals.jun), keJutaValue(globalTotals.q2),
+                keJutaValue(globalTotals.jul), keJutaValue(globalTotals.aug), keJutaValue(globalTotals.sep), keJutaValue(globalTotals.q3),
+                keJutaValue(globalTotals.oct), keJutaValue(globalTotals.nov), keJutaValue(globalTotals.dec), keJutaValue(globalTotals.q4),
+                keJutaValue(globalTotals.revRbb)
+            ]);
+
+            // B. Add Wilayah, Unit, and Projects Rows
+            for (let wilayah in hierarchy) {
+                let wTot = hierarchy[wilayah].totals;
+                excelRows.push([
+                    `Wilayah Kerja: ${wilayah}`, '', '', keJutaValue(wTot.enpUsulan), '', '', keJutaValue(wTot.revRbb),
+                    keJutaValue(wTot.jan), keJutaValue(wTot.feb), keJutaValue(wTot.mar), keJutaValue(wTot.q1),
+                    keJutaValue(wTot.apr), keJutaValue(wTot.mei), keJutaValue(wTot.jun), keJutaValue(wTot.q2),
+                    keJutaValue(wTot.jul), keJutaValue(wTot.aug), keJutaValue(wTot.sep), keJutaValue(wTot.q3),
+                    keJutaValue(wTot.oct), keJutaValue(wTot.nov), keJutaValue(wTot.dec), keJutaValue(wTot.q4),
+                    keJutaValue(wTot.revRbb)
+                ]);
+
+                for (let unitKey in hierarchy[wilayah].units) {
+                    let uTot = hierarchy[wilayah].units[unitKey].totals;
+                    excelRows.push([
+                        '', `Unit Kerja: ${unitKey}`, '', keJutaValue(uTot.enpUsulan), '', '', keJutaValue(uTot.revRbb),
+                        keJutaValue(uTot.jan), keJutaValue(uTot.feb), keJutaValue(uTot.mar), keJutaValue(uTot.q1),
+                        keJutaValue(uTot.apr), keJutaValue(uTot.mei), keJutaValue(uTot.jun), keJutaValue(uTot.q2),
+                        keJutaValue(uTot.jul), keJutaValue(uTot.aug), keJutaValue(uTot.sep), keJutaValue(uTot.q3),
+                        keJutaValue(uTot.oct), keJutaValue(uTot.nov), keJutaValue(uTot.dec), keJutaValue(uTot.q4),
+                        keJutaValue(uTot.revRbb)
+                    ]);
+
+                    hierarchy[wilayah].units[unitKey].projects.forEach(item => {
+                        let det = item.detail;
+                        let q1 = parseFloat(det.months.jan||0) + parseFloat(det.months.feb||0) + parseFloat(det.months.mar||0);
+                        let q2 = parseFloat(det.months.apr||0) + parseFloat(det.months.mei||0) + parseFloat(det.months.jun||0);
+                        let q3 = parseFloat(det.months.jul||0) + parseFloat(det.months.aug||0) + parseFloat(det.months.sep||0);
+                        let q4 = parseFloat(det.months.oct||0) + parseFloat(det.months.nov||0) + parseFloat(det.months.dec||0);
+
+                        excelRows.push([
+                            item.base.Wilayah,
+                            `[${det.entitas}] ${det.operatingUnit}`,
+                            `${item.base.Project_Number} - ${item.base.Nama_Project}`,
+                            keJutaValue(det.alokasiValue),
+                            det.alokasiStatus,
+                            det.projectStatus,
+                            keJutaValue(det.totalRealisasi),
+                            keJutaValue(det.months.jan), keJutaValue(det.months.feb), keJutaValue(det.months.mar), keJutaValue(q1),
+                            keJutaValue(det.months.apr), keJutaValue(det.months.mei), keJutaValue(det.months.jun), keJutaValue(q2),
+                            keJutaValue(det.months.jul), keJutaValue(det.months.aug), keJutaValue(det.months.sep), keJutaValue(q3),
+                            keJutaValue(det.months.oct), keJutaValue(det.months.nov), keJutaValue(det.months.dec), keJutaValue(q4),
+                            keJutaValue(det.totalRealisasi)
+                        ]);
+                    });
+                }
+            }
+        }
+
+        // 4. Buat Sheet Excel & Terapkan Merge Cells Utama
+        const ws = XLSX.utils.aoa_to_sheet(excelRows);
+        
+        ws['!merges'] = [
+            { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }, // Judul baris 1
+            { s: { r: 1, c: 0 }, e: { r: 1, c: 6 } }, // Judul baris 2
+            { s: { r: 2, c: 0 }, e: { r: 2, c: 6 } }, // Judul baris 3
+            // Merge Header Utama Bertingkat (row 5 & row 6)
+            { s: { r: 5, c: 0 }, e: { r: 6, c: 0 } }, // Wilayah
+            { s: { r: 5, c: 1 }, e: { r: 6, c: 1 } }, // Entitas
+            { s: { r: 5, c: 2 }, e: { r: 6, c: 2 } }, // Project & Nama
+            { s: { r: 5, c: 3 }, e: { r: 6, c: 3 } }, // Plafon ENP Usulan
+            { s: { r: 5, c: 4 }, e: { r: 6, c: 4 } }, // Status ENP
+            { s: { r: 5, c: 5 }, e: { r: 6, c: 5 } }, // Status Project
+            { s: { r: 5, c: 6 }, e: { r: 6, c: 6 } }, // Usulan Alokasi RBB
+            { s: { r: 5, c: 23 }, e: { r: 6, c: 23 } } // Total Rencana Realisasi
+        ];
+
+        XLSX.utils.book_append_sheet(wb, ws, "Summary Executive");
+        XLSX.writeFile(wb, `Summary_Executive_CAPEX_Wilayah_${selectedWilDropdown}_2026.xlsx`);
+    }
+
+    // =========================================================================
+    // FEATURE 2: DOWNLOAD PDF - TETAP MENGGUNAKAN PROGRAMMATIC ARRAYS (RP JUTA)
+    // =========================================================================
+    async function exportToPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('l', 'mm', 'a3');
+
+        // Header Dokumen PDF
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(20);
+        doc.setTextColor(0, 77, 90); 
+        doc.text("SUMMARY EXECUTIVE HASIL KONFIRMASI", 15, 18);
+        
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(11);
+        doc.setTextColor(102, 102, 102);
+        doc.text("Sistem Pelaporan Realisasi Anggaran Terkonsolidasi 2026 (Dalam Satuan Juta Rupiah / Rp Juta)", 15, 25);
+        doc.text("Waktu Cetak: " + new Date().toLocaleString('id-ID') + " WIB", 15, 31);
+
+        doc.setDrawColor(229, 114, 0); 
+        doc.setLineWidth(1);
+        doc.line(15, 35, doc.internal.pageSize.width - 15, 35);
+
+        const pdfHeaders = [[
+            'Wilayah', 'Entitas - Operating Unit', 'Project & Nama Project', 
+            'Plafon ENP Usulan (Juta)', 'Status ENP', 'Status Project', 'Usulan Alokasi RBB (Juta)',
+            'Jan', 'Feb', 'Mar', 'Total Q1', 'Apr', 'Mei', 'Jun', 'Total Q2',
+            'Jul', 'Aug', 'Sep', 'Total Q3', 'Oct', 'Nov', 'Des', 'Total Q4', 'Total Rencana Realisasi (Juta)'
+        ]];
+
+        let pdfBody = [];
+        let rowStylesMap = {};
+
+        const keJutaValue = (num) => {
+            let val = parseFloat(num || 0);
+            return isNaN(val) ? 0 : Math.round(val / 1000000);
+        };
+
+        if (currentFilteredData && currentFilteredData.length > 0) {
+            let hierarchy = {};
+            let globalTotals = createEmptyTotalObject();
+
+            currentFilteredData.forEach(item => {
+                let wil = item.base.Wilayah;
+                let unitKey = `[${item.detail.entitas}] ${item.detail.operatingUnit}`;
+                if (!hierarchy[wil]) hierarchy[wil] = { totals: createEmptyTotalObject(), units: {} };
+                if (!hierarchy[wil].units[unitKey]) hierarchy[wil].units[unitKey] = { totals: createEmptyTotalObject(), projects: [] };
+                
+                const det = item.detail;
+                let enpUsulan = parseFloat(det.alokasiValue || 0);
+                let usulRevisisRbb = parseFloat(det.totalRealisasi || 0);
+                let q1 = parseFloat(det.months.jan||0) + parseFloat(det.months.feb||0) + parseFloat(det.months.mar||0);
+                let q2 = parseFloat(det.months.apr||0) + parseFloat(det.months.mei||0) + parseFloat(det.months.jun||0);
+                let q3 = parseFloat(det.months.jul||0) + parseFloat(det.months.aug||0) + parseFloat(det.months.sep||0);
+                let q4 = parseFloat(det.months.oct||0) + parseFloat(det.months.nov||0) + parseFloat(det.months.dec||0);
+
+                accumulateTotals(hierarchy[wil].units[unitKey].totals, item, det, enpUsulan, q1, q2, q3, q4, usulRevisisRbb);
+                accumulateTotals(hierarchy[wil].totals, item, det, enpUsulan, q1, q2, q3, q4, usulRevisisRbb);
+                accumulateTotals(globalTotals, item, det, enpUsulan, q1, q2, q3, q4, usulRevisisRbb);
+
+                hierarchy[wil].units[unitKey].projects.push(item);
+            });
+
+            // Push GRAND TOTAL
+            let gIdx = pdfBody.length; rowStylesMap[gIdx] = 'grand';
             pdfBody.push([
-                'GRAND TOTAL', 'ALL WILAYAH', '-',
-                keJutaValue(globalTotals.enpUsulan).toLocaleString('id-ID'), '', keJutaValue(globalTotals.revRbb).toLocaleString('id-ID'),
+                'GRAND TOTAL', 'ALL WILAYAH', 'KONSOLIDASI NASIONAL', keJutaValue(globalTotals.enpUsulan).toLocaleString('id-ID'), '', '', keJutaValue(globalTotals.revRbb).toLocaleString('id-ID'),
                 keJutaValue(globalTotals.jan).toLocaleString('id-ID'), keJutaValue(globalTotals.feb).toLocaleString('id-ID'), keJutaValue(globalTotals.mar).toLocaleString('id-ID'), keJutaValue(globalTotals.q1).toLocaleString('id-ID'),
                 keJutaValue(globalTotals.apr).toLocaleString('id-ID'), keJutaValue(globalTotals.mei).toLocaleString('id-ID'), keJutaValue(globalTotals.jun).toLocaleString('id-ID'), keJutaValue(globalTotals.q2).toLocaleString('id-ID'),
                 keJutaValue(globalTotals.jul).toLocaleString('id-ID'), keJutaValue(globalTotals.aug).toLocaleString('id-ID'), keJutaValue(globalTotals.sep).toLocaleString('id-ID'), keJutaValue(globalTotals.q3).toLocaleString('id-ID'),
@@ -607,15 +751,11 @@
                 keJutaValue(globalTotals.revRbb).toLocaleString('id-ID')
             ]);
 
-            // Loop Wilayah & Unit
             for (let wilayah in hierarchy) {
                 let wTot = hierarchy[wilayah].totals;
-                let wilIndex = pdfBody.length;
-                rowStylesMap[wilIndex] = 'wilayah';
-                
+                let wIdx = pdfBody.length; rowStylesMap[wIdx] = 'wilayah';
                 pdfBody.push([
-                    `Wilayah Kerja: ${wilayah}`, '', '',
-                    keJutaValue(wTot.enpUsulan).toLocaleString('id-ID'), '', keJutaValue(wTot.revRbb).toLocaleString('id-ID'),
+                    `Wilayah Kerja: ${wilayah}`, '', '', keJutaValue(wTot.enpUsulan).toLocaleString('id-ID'), '', '', keJutaValue(wTot.revRbb).toLocaleString('id-ID'),
                     keJutaValue(wTot.jan).toLocaleString('id-ID'), keJutaValue(wTot.feb).toLocaleString('id-ID'), keJutaValue(wTot.mar).toLocaleString('id-ID'), keJutaValue(wTot.q1).toLocaleString('id-ID'),
                     keJutaValue(wTot.apr).toLocaleString('id-ID'), keJutaValue(wTot.mei).toLocaleString('id-ID'), keJutaValue(wTot.jun).toLocaleString('id-ID'), keJutaValue(wTot.q2).toLocaleString('id-ID'),
                     keJutaValue(wTot.jul).toLocaleString('id-ID'), keJutaValue(wTot.aug).toLocaleString('id-ID'), keJutaValue(wTot.sep).toLocaleString('id-ID'), keJutaValue(wTot.q3).toLocaleString('id-ID'),
@@ -625,12 +765,9 @@
 
                 for (let unitKey in hierarchy[wilayah].units) {
                     let uTot = hierarchy[wilayah].units[unitKey].totals;
-                    let unitIndex = pdfBody.length;
-                    rowStylesMap[unitIndex] = 'unit';
-
+                    let uIdx = pdfBody.length; rowStylesMap[uIdx] = 'unit';
                     pdfBody.push([
-                        '', `Unit Kerja: ${unitKey}`, '',
-                        keJutaValue(uTot.enpUsulan).toLocaleString('id-ID'), '', keJutaValue(uTot.revRbb).toLocaleString('id-ID'),
+                        '', `Unit Kerja: ${unitKey}`, '', keJutaValue(uTot.enpUsulan).toLocaleString('id-ID'), '', '', keJutaValue(uTot.revRbb).toLocaleString('id-ID'),
                         keJutaValue(uTot.jan).toLocaleString('id-ID'), keJutaValue(uTot.feb).toLocaleString('id-ID'), keJutaValue(uTot.mar).toLocaleString('id-ID'), keJutaValue(uTot.q1).toLocaleString('id-ID'),
                         keJutaValue(uTot.apr).toLocaleString('id-ID'), keJutaValue(uTot.mei).toLocaleString('id-ID'), keJutaValue(uTot.jun).toLocaleString('id-ID'), keJutaValue(uTot.q2).toLocaleString('id-ID'),
                         keJutaValue(uTot.jul).toLocaleString('id-ID'), keJutaValue(uTot.aug).toLocaleString('id-ID'), keJutaValue(uTot.sep).toLocaleString('id-ID'), keJutaValue(uTot.q3).toLocaleString('id-ID'),
@@ -638,25 +775,253 @@
                         keJutaValue(uTot.revRbb).toLocaleString('id-ID')
                     ]);
 
-                    // MASUKKAN RINCIAN PROJECT DETAIL (MURNI RP JUTA)
+                    // PROSES PENYUSUNAN PROGRAMMATIC ARRAY UNTUK DATA BARIS RINCIAN PDF
+hierarchy[wilayah].units[unitKey].projects.forEach(item => {
+    let det = item.detail;
+    let q1 = parseFloat(det.months.jan||0) + parseFloat(det.months.feb||0) + parseFloat(det.months.mar||0);
+    let q2 = parseFloat(det.months.apr||0) + parseFloat(det.months.mei||0) + parseFloat(det.months.jun||0);
+    let q3 = parseFloat(det.months.jul||0) + parseFloat(det.months.aug||0) + parseFloat(det.months.sep||0);
+    let q4 = parseFloat(det.months.oct||0) + parseFloat(det.months.nov||0) + parseFloat(det.months.dec||0);
+
+    let dIdx = pdfBody.length; 
+    rowStylesMap[dIdx] = 'detail';
+    rowStylesMap[dIdx + '_status'] = det.alokasiStatus || '';
+    rowStylesMap[dIdx + '_pstatus'] = det.projectStatus || '';
+
+    pdfBody.push([
+        item.base.Wilayah, 
+        `[${det.entitas}] ${det.operatingUnit}`, 
+        // MODIFIKASI: Menempatkan Nama Project sebagai sorotan utama di bawah nomor proyek
+        `${item.base.Project_Number}\n${item.base.Nama_Project.toUpperCase()}`,
+        keJutaValue(det.alokasiValue).toLocaleString('id-ID'), 
+        det.alokasiStatus, 
+        det.projectStatus, 
+        keJutaValue(det.totalRealisasi).toLocaleString('id-ID'),
+        keJutaValue(det.months.jan).toLocaleString('id-ID'), keJutaValue(det.months.feb).toLocaleString('id-ID'), keJutaValue(det.months.mar).toLocaleString('id-ID'), keJutaValue(q1).toLocaleString('id-ID'),
+        keJutaValue(det.months.apr).toLocaleString('id-ID'), keJutaValue(det.months.mei).toLocaleString('id-ID'), keJutaValue(det.months.jun).toLocaleString('id-ID'), keJutaValue(q2).toLocaleString('id-ID'),
+        keJutaValue(det.months.jul).toLocaleString('id-ID'), keJutaValue(det.months.aug).toLocaleString('id-ID'), keJutaValue(det.months.sep).toLocaleString('id-ID'), keJutaValue(q3).toLocaleString('id-ID'),
+        keJutaValue(det.months.oct).toLocaleString('id-ID'), keJutaValue(det.months.nov).toLocaleString('id-ID'), keJutaValue(det.months.dec).toLocaleString('id-ID'), keJutaValue(q4).toLocaleString('id-ID'),
+        keJutaValue(det.totalRealisasi).toLocaleString('id-ID')
+    ]);
+});
+                }
+            }
+        }
+
+        doc.autoTable({
+            head: pdfHeaders,
+            body: pdfBody,
+            startY: 42,
+            theme: 'grid',
+            styles: { fontSize: 8, cellPadding: 2.5, overflow: 'linebreak', font: 'helvetica', textColor: [44, 44, 44], borderColor: [180, 195, 195] },
+            headStyles: { fillColor: [0, 102, 119], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center', valign: 'middle' },
+            columnStyles: {
+                3: { halign: 'right' }, 4: { halign: 'center' }, 5: { halign: 'center' }, 6: { halign: 'right' },
+                7: { halign: 'right' }, 8: { halign: 'right' }, 9: { halign: 'right' }, 10: { halign: 'right', fillColor: [240, 247, 247] },
+                11: { halign: 'right' }, 12: { halign: 'right' }, 13: { halign: 'right' }, 14: { halign: 'right', fillColor: [240, 247, 247] },
+                15: { halign: 'right' }, 16: { halign: 'right' }, 17: { halign: 'right' }, 18: { halign: 'right', fillColor: [240, 247, 247] },
+                19: { halign: 'right' }, 20: { halign: 'right' }, 21: { halign: 'right' }, 22: { halign: 'right', fillColor: [240, 247, 247] },
+                23: { halign: 'right', fontStyle: 'bold' }
+            },
+            didParseCell: function (data) {
+                let rIdx = data.row.index;
+                let rType = rowStylesMap[rIdx];
+
+                if (rType === 'grand') {
+                    doc.setFillColor(255, 215, 150); data.cell.styles.fillColor = [255, 215, 150]; data.cell.styles.fontStyle = 'bold'; data.cell.styles.textColor = [160, 50, 0];
+                } else if (rType === 'wilayah') {
+                    doc.setFillColor(165, 220, 215); data.cell.styles.fillColor = [165, 220, 215]; data.cell.styles.fontStyle = 'bold'; data.cell.styles.textColor = [0, 60, 70];
+                } else if (rType === 'unit') {
+                    doc.setFillColor(235, 238, 240); data.cell.styles.fillColor = [235, 238, 240]; data.cell.styles.fontStyle = 'bold';
+                }
+
+                if (rType === 'detail') {
+                    if(data.column.index === 4) {
+                        let sTxt = rowStylesMap[rIdx + '_status'] || '';
+                        if(sTxt.includes('Sesuai')) data.cell.styles.textColor = [30, 130, 50];
+                        else if(sTxt.includes('Dropped')) data.cell.styles.textColor = [198, 40, 40];
+                        else data.cell.styles.textColor = [183, 129, 3];
+                    }
+                    if(data.column.index === 5) {
+                        let pTxt = rowStylesMap[rIdx + '_pstatus'] || '';
+                        if(pTxt.includes('Aktif') && !pTxt.includes('Non')) data.cell.styles.textColor = [46, 125, 50];
+                        else data.cell.styles.textColor = [117, 117, 117];
+                        data.cell.styles.fontStyle = 'bold';
+                    }
+                }
+            },
+            didDrawPage: function (data) { doc.lastTableY = data.cursor.y; }
+        });
+
+        // (Sisa logika Box Otentikasi tetap sama seperti kode sukses sebelumnya...)
+        const selectedWilDropdown = document.getElementById('filter-summary-wilayah').value.trim().toUpperCase();
+        let lockWilayah = selectedWilDropdown;
+        let lockNama = "-"; let lockNpp = "-"; let lockJabatan = "-"; let lockStatus = "NOT LOCKED / UNVERIFIED"; let lockTime = "-";
+        let isLocked = false; let isAllRegionsMode = (selectedWilDropdown === 'ALL'); let totalLockedRegions = 0;
+
+        try {
+            const lockRes = await fetch(`${API_URL_BASE}?action=get_locks`);
+            const lockResult = await lockRes.json();
+            if (lockResult && lockResult.success) {
+                let rowsData = Array.isArray(lockResult.data) ? lockResult.data : (lockResult.data.rows || []);
+                if (rowsData.length > 0) {
+                    if (isAllRegionsMode) {
+                        let uniqueLockedWilayah = new Set();
+                        rowsData.forEach(rowItem => {
+                            let stat = (rowItem.status || "").toString().trim().toUpperCase();
+                            if ((stat === 'LOCKED' || stat === 'TERKUNCI') && rowItem.wilayah) {
+                                uniqueLockedWilayah.add(rowItem.wilayah.toString().trim().toUpperCase());
+                            }
+                        });
+                        totalLockedRegions = uniqueLockedWilayah.size;
+                        lockStatus = "KONSOLIDASI DATA"; lockNama = "Sistem Konsolidasi Pusat"; lockJabatan = "Sistem Otomatis Pelaporan Anggaran"; lockTime = new Date().toLocaleString('id-ID');
+                    } else {
+                        const matchedRecord = rowsData.find(rowItem => rowItem.wilayah && rowItem.wilayah.toString().trim().toUpperCase() === selectedWilDropdown);
+                        if (matchedRecord) {
+                            lockWilayah = matchedRecord.wilayah; lockNama = matchedRecord.nama; lockNpp = matchedRecord.npp; lockJabatan = matchedRecord.jabatan;
+                            let currentStat = (matchedRecord.status || "NOT LOCKED").toString().trim().toUpperCase();
+                            if (currentStat === 'LOCKED' || currentStat === 'TERKUNCI') { isLocked = true; lockStatus = "LOCKED / VALIDATED"; }
+                            lockTime = matchedRecord.timestamp;
+                        }
+                    }
+                }
+            }
+        } catch (err) { console.error(err); }
+
+        let currentY = doc.lastTableY + 15;
+        if (currentY + 60 > doc.internal.pageSize.height) { doc.addPage(); currentY = 20; }
+        doc.setDrawColor(0, 102, 119); doc.setLineWidth(0.8); doc.setFillColor(245, 250, 250); doc.rect(15, currentY, 180, 52, 'FD');
+        doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(0, 77, 90); doc.text("KOTAK OTENTIKASI & VALIDASI DATA (DATABASE_LOCKS)", 22, currentY + 9);
+        doc.setDrawColor(0, 102, 119); doc.setLineWidth(0.4); doc.line(22, currentY + 13, 185, currentY + 13);
+        doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(50, 50, 50);
+
+        if (isAllRegionsMode) {
+            doc.text(`Status Dokumen  : `, 22, currentY + 20); doc.setFont("helvetica", "bold"); doc.setTextColor(0, 102, 119); doc.text(`${lockStatus}`, 55, currentY + 20);
+            doc.setFont("helvetica", "normal"); doc.setTextColor(50, 50, 50); doc.text(`Informasi Log    :  ${lockNama}`, 22, currentY + 26); doc.text(`Fungsi Engine    :  ${lockJabatan}`, 22, currentY + 32); doc.text(`Keterangan Data  : `, 22, currentY + 38);
+            doc.setFont("helvetica", "bold"); doc.text(`Mencakup Keseluruhan data dari 17 Kantor Wilayah BNI`, 55, currentY + 38);
+            doc.setFont("helvetica", "oblique"); doc.setFontSize(9.5); doc.setTextColor(229, 114, 0); doc.text(`Progress Validasi: Sebanyak ${totalLockedRegions} dari 17 Kantor Wilayah telah resmi tervalidasi & dikunci.`, 22, currentY + 46);
+        } else {
+            doc.text(`Status Dokumen  : `, 22, currentY + 20); doc.setFont("helvetica", "bold"); if (isLocked) doc.setTextColor(40, 167, 69); else doc.setTextColor(220, 53, 69); doc.text(`${lockStatus}`, 55, currentY + 20);
+            doc.setFont("helvetica", "normal"); doc.setTextColor(50, 50, 50); doc.text(`Nama Validator   :  ${lockNama}`, 22, currentY + 26); doc.text(`NPP / Jabatan     :  ${lockNpp} / ${lockJabatan}`, 22, currentY + 32); doc.text(`Wilayah Kerja     :  Wilayah ${lockWilayah}`, 22, currentY + 38);
+            doc.setFont("helvetica", "oblique"); doc.setFontSize(9); doc.setTextColor(110, 110, 110); doc.text(isLocked ? `Validasi resmi terkunci pada: ${lockTime} WIB` : `Sistem mencatat wilayah ini belum melakukan validasi / kunci data.`, 22, currentY + 46);
+        }
+        doc.save(`Summary_Executive_CAPEX_Wilayah_${lockWilayah}_2026.pdf`);
+    }
+
+    // =========================================================================
+    // FITUR UTAMA: DOWNLOAD PDF (MURNI FORMAT RP JUTA DENGAN PROGRAMMATIC ARRAYS)
+    // =========================================================================
+    async function exportToPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('l', 'mm', 'a3');
+
+        // Header Dokumen PDF
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(20);
+        doc.setTextColor(0, 77, 90); 
+        doc.text("SUMMARY EXECUTIVE HASIL KONFIRMASI PROJECT CAPEX 2026", 15, 18);
+        
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(11);
+        doc.setTextColor(102, 102, 102);
+        doc.text("Sistem Monitoring Project CAPEX Tahun 2026 (Dalam Satuan Juta Rupiah / Rp Juta)", 15, 25);
+        doc.text("Waktu Cetak: " + new Date().toLocaleString('id-ID') + " WIB", 15, 31);
+
+        doc.setDrawColor(229, 114, 0); 
+        doc.setLineWidth(1);
+        doc.line(15, 35, doc.internal.pageSize.width - 15, 35);
+
+        // REKONSTRUKSI MATRIKS UTUH AGAR SINKRON RP JUTA SAMPAI BULAN DESEMBER
+        const pdfHeaders = [[
+            'Wilayah', 'Entitas - Operating Unit', 'Project & Nama Project', 
+            'Plafon ENP Usulan (Juta)', 'Status ENP', 'Status Project', 'Usulan Alokasi RBB (Juta)',
+            'Jan', 'Feb', 'Mar', 'Total Q1', 'Apr', 'Mei', 'Jun', 'Total Q2',
+            'Jul', 'Aug', 'Sep', 'Total Q3', 'Oct', 'Nov', 'Des', 'Total Q4', 'Total Rencana Realisasi (Juta)'
+        ]];
+
+        let pdfBody = [];
+        let rowStylesMap = {};
+
+        const keJutaValue = (num) => {
+            let val = parseFloat(num || 0);
+            return isNaN(val) ? 0 : Math.round(val / 1000000);
+        };
+
+        if (currentFilteredData && currentFilteredData.length > 0) {
+            let hierarchy = {};
+            let globalTotals = createEmptyTotalObject();
+
+            currentFilteredData.forEach(item => {
+                let wil = item.base.Wilayah;
+                let unitKey = `[${item.detail.entitas}] ${item.detail.operatingUnit}`;
+                if (!hierarchy[wil]) hierarchy[wil] = { totals: createEmptyTotalObject(), units: {} };
+                if (!hierarchy[wil].units[unitKey]) hierarchy[wil].units[unitKey] = { totals: createEmptyTotalObject(), projects: [] };
+                
+                const det = item.detail;
+                let enpUsulan = parseFloat(det.alokasiValue || 0);
+                let usulRevisisRbb = parseFloat(det.totalRealisasi || 0);
+                let q1 = parseFloat(det.months.jan||0) + parseFloat(det.months.feb||0) + parseFloat(det.months.mar||0);
+                let q2 = parseFloat(det.months.apr||0) + parseFloat(det.months.mei||0) + parseFloat(det.months.jun||0);
+                let q3 = parseFloat(det.months.jul||0) + parseFloat(det.months.aug||0) + parseFloat(det.months.sep||0);
+                let q4 = parseFloat(det.months.oct||0) + parseFloat(det.months.nov||0) + parseFloat(det.months.dec||0);
+
+                accumulateTotals(hierarchy[wil].units[unitKey].totals, item, det, enpUsulan, q1, q2, q3, q4, usulRevisisRbb);
+                accumulateTotals(hierarchy[wil].totals, item, det, enpUsulan, q1, q2, q3, q4, usulRevisisRbb);
+                accumulateTotals(globalTotals, item, det, enpUsulan, q1, q2, q3, q4, usulRevisisRbb);
+
+                hierarchy[wil].units[unitKey].projects.push(item);
+            });
+
+            // Push GRAND TOTAL
+            let gIdx = pdfBody.length; rowStylesMap[gIdx] = 'grand';
+            pdfBody.push([
+                'GRAND TOTAL', 'ALL WILAYAH', '-', keJutaValue(globalTotals.enpUsulan).toLocaleString('id-ID'), '', '', keJutaValue(globalTotals.revRbb).toLocaleString('id-ID'),
+                keJutaValue(globalTotals.jan).toLocaleString('id-ID'), keJutaValue(globalTotals.feb).toLocaleString('id-ID'), keJutaValue(globalTotals.mar).toLocaleString('id-ID'), keJutaValue(globalTotals.q1).toLocaleString('id-ID'),
+                keJutaValue(globalTotals.apr).toLocaleString('id-ID'), keJutaValue(globalTotals.mei).toLocaleString('id-ID'), keJutaValue(globalTotals.jun).toLocaleString('id-ID'), keJutaValue(globalTotals.q2).toLocaleString('id-ID'),
+                keJutaValue(globalTotals.jul).toLocaleString('id-ID'), keJutaValue(globalTotals.aug).toLocaleString('id-ID'), keJutaValue(globalTotals.sep).toLocaleString('id-ID'), keJutaValue(globalTotals.q3).toLocaleString('id-ID'),
+                keJutaValue(globalTotals.oct).toLocaleString('id-ID'), keJutaValue(globalTotals.nov).toLocaleString('id-ID'), keJutaValue(globalTotals.dec).toLocaleString('id-ID'), keJutaValue(globalTotals.q4).toLocaleString('id-ID'),
+                keJutaValue(globalTotals.revRbb).toLocaleString('id-ID')
+            ]);
+
+            for (let wilayah in hierarchy) {
+                let wTot = hierarchy[wilayah].totals;
+                let wIdx = pdfBody.length; rowStylesMap[wIdx] = 'wilayah';
+                pdfBody.push([
+                    `Wilayah Kerja: ${wilayah}`, '', '', keJutaValue(wTot.enpUsulan).toLocaleString('id-ID'), '', '', keJutaValue(wTot.revRbb).toLocaleString('id-ID'),
+                    keJutaValue(wTot.jan).toLocaleString('id-ID'), keJutaValue(wTot.feb).toLocaleString('id-ID'), keJutaValue(wTot.mar).toLocaleString('id-ID'), keJutaValue(wTot.q1).toLocaleString('id-ID'),
+                    keJutaValue(wTot.apr).toLocaleString('id-ID'), keJutaValue(wTot.mei).toLocaleString('id-ID'), keJutaValue(wTot.jun).toLocaleString('id-ID'), keJutaValue(wTot.q2).toLocaleString('id-ID'),
+                    keJutaValue(wTot.jul).toLocaleString('id-ID'), keJutaValue(wTot.aug).toLocaleString('id-ID'), keJutaValue(wTot.sep).toLocaleString('id-ID'), keJutaValue(wTot.q3).toLocaleString('id-ID'),
+                    keJutaValue(wTot.oct).toLocaleString('id-ID'), keJutaValue(wTot.nov).toLocaleString('id-ID'), keJutaValue(wTot.dec).toLocaleString('id-ID'), keJutaValue(wTot.q4).toLocaleString('id-ID'),
+                    keJutaValue(wTot.revRbb).toLocaleString('id-ID')
+                ]);
+
+                for (let unitKey in hierarchy[wilayah].units) {
+                    let uTot = hierarchy[wilayah].units[unitKey].totals;
+                    let uIdx = pdfBody.length; rowStylesMap[uIdx] = 'unit';
+                    pdfBody.push([
+                        '', `Unit Kerja: ${unitKey}`, '', keJutaValue(uTot.enpUsulan).toLocaleString('id-ID'), '', '', keJutaValue(uTot.revRbb).toLocaleString('id-ID'),
+                        keJutaValue(uTot.jan).toLocaleString('id-ID'), keJutaValue(uTot.feb).toLocaleString('id-ID'), keJutaValue(uTot.mar).toLocaleString('id-ID'), keJutaValue(uTot.q1).toLocaleString('id-ID'),
+                        keJutaValue(uTot.apr).toLocaleString('id-ID'), keJutaValue(uTot.mei).toLocaleString('id-ID'), keJutaValue(uTot.jun).toLocaleString('id-ID'), keJutaValue(uTot.q2).toLocaleString('id-ID'),
+                        keJutaValue(uTot.jul).toLocaleString('id-ID'), keJutaValue(uTot.aug).toLocaleString('id-ID'), keJutaValue(uTot.sep).toLocaleString('id-ID'), keJutaValue(uTot.q3).toLocaleString('id-ID'),
+                        keJutaValue(uTot.oct).toLocaleString('id-ID'), keJutaValue(uTot.nov).toLocaleString('id-ID'), keJutaValue(uTot.dec).toLocaleString('id-ID'), keJutaValue(uTot.q4).toLocaleString('id-ID'),
+                        keJutaValue(uTot.revRbb).toLocaleString('id-ID')
+                    ]);
+
                     hierarchy[wilayah].units[unitKey].projects.forEach(item => {
                         let det = item.detail;
-                        let projectIndex = pdfBody.length;
-                        rowStylesMap[projectIndex] = 'detail';
-                        rowStylesMap[projectIndex + '_status'] = det.alokasiStatus || '';
-
                         let q1 = parseFloat(det.months.jan||0) + parseFloat(det.months.feb||0) + parseFloat(det.months.mar||0);
                         let q2 = parseFloat(det.months.apr||0) + parseFloat(det.months.mei||0) + parseFloat(det.months.jun||0);
                         let q3 = parseFloat(det.months.jul||0) + parseFloat(det.months.aug||0) + parseFloat(det.months.sep||0);
                         let q4 = parseFloat(det.months.oct||0) + parseFloat(det.months.nov||0) + parseFloat(det.months.dec||0);
 
+                        let dIdx = pdfBody.length; 
+                        rowStylesMap[dIdx] = 'detail';
+                        rowStylesMap[dIdx + '_status'] = det.alokasiStatus || '';
+                        rowStylesMap[dIdx + '_pstatus'] = det.projectStatus || '';
+
                         pdfBody.push([
-                            item.base.Wilayah,
-                            `[${det.entitas}] ${det.operatingUnit}`,
-                            `${item.base.Project_Number}\n${item.base.Nama_Project}`,
-                            keJutaValue(det.alokasiValue).toLocaleString('id-ID'),
-                            det.alokasiStatus,
-                            keJutaValue(det.totalRealisasi).toLocaleString('id-ID'),
+                            item.base.Wilayah, `[${det.entitas}] ${det.operatingUnit}`, `${item.base.Project_Number}\n${item.base.Nama_Project}`,
+                            keJutaValue(det.alokasiValue).toLocaleString('id-ID'), det.alokasiStatus, det.projectStatus, keJutaValue(det.totalRealisasi).toLocaleString('id-ID'),
                             keJutaValue(det.months.jan).toLocaleString('id-ID'), keJutaValue(det.months.feb).toLocaleString('id-ID'), keJutaValue(det.months.mar).toLocaleString('id-ID'), keJutaValue(q1).toLocaleString('id-ID'),
                             keJutaValue(det.months.apr).toLocaleString('id-ID'), keJutaValue(det.months.mei).toLocaleString('id-ID'), keJutaValue(det.months.jun).toLocaleString('id-ID'), keJutaValue(q2).toLocaleString('id-ID'),
                             keJutaValue(det.months.jul).toLocaleString('id-ID'), keJutaValue(det.months.aug).toLocaleString('id-ID'), keJutaValue(det.months.sep).toLocaleString('id-ID'), keJutaValue(q3).toLocaleString('id-ID'),
@@ -668,75 +1033,53 @@
             }
         }
 
-        // 3. JALANKAN GENERATE AUTOTABLE DENGAN ARRAY BERSIH
         doc.autoTable({
             head: pdfHeaders,
             body: pdfBody,
             startY: 42,
             theme: 'grid',
-            styles: {
-                fontSize: 8,
-                cellPadding: 2.5,
-                overflow: 'linebreak',
-                font: 'helvetica',
-                textColor: [44, 44, 44],
-                borderColor: [180, 195, 195]
-            },
-            headStyles: {
-                fillColor: [0, 102, 119], // --bni-teal
-                textColor: [255, 255, 255],
-                fontStyle: 'bold',
-                halign: 'center',
-                valign: 'middle'
-            },
+            styles: { fontSize: 8, cellPadding: 2.5, overflow: 'linebreak', font: 'helvetica', textColor: [44, 44, 44], borderColor: [180, 195, 195] },
+            headStyles: { fillColor: [0, 102, 119], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center', valign: 'middle' },
             columnStyles: {
-                0: { width: 18 }, 1: { width: 40 }, 2: { width: 55 }, // Project info
-                3: { halign: 'right' }, 4: { halign: 'center' }, 5: { halign: 'right' }, // Financials
-                6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' }, 9: { halign: 'right', fillColor: [240, 247, 247] }, // Q1
-                10: { halign: 'right' }, 11: { halign: 'right' }, 12: { halign: 'right' }, 13: { halign: 'right', fillColor: [240, 247, 247] }, // Q2
-                14: { halign: 'right' }, 15: { halign: 'right' }, 16: { halign: 'right' }, 17: { halign: 'right', fillColor: [240, 247, 247] }, // Q3
-                18: { halign: 'right' }, 19: { halign: 'right' }, 20: { halign: 'right' }, 21: { halign: 'right', fillColor: [240, 247, 247] }, // Q4
-                22: { halign: 'right', fontStyle: 'bold' }
+                3: { halign: 'right' }, 4: { halign: 'center' }, 5: { halign: 'center' }, 6: { halign: 'right' },
+                7: { halign: 'right' }, 8: { halign: 'right' }, 9: { halign: 'right' }, 10: { halign: 'right', fillColor: [240, 247, 247] },
+                11: { halign: 'right' }, 12: { halign: 'right' }, 13: { halign: 'right' }, 14: { halign: 'right', fillColor: [240, 247, 247] },
+                15: { halign: 'right' }, 16: { halign: 'right' }, 17: { halign: 'right' }, 18: { halign: 'right', fillColor: [240, 247, 247] },
+                19: { halign: 'right' }, 20: { halign: 'right' }, 21: { halign: 'right' }, 22: { halign: 'right', fillColor: [240, 247, 247] },
+                23: { halign: 'right', fontStyle: 'bold' }
             },
             didParseCell: function (data) {
-                let rIndex = data.row.index;
-                let rType = rowStylesMap[rIndex];
+                let rIdx = data.row.index;
+                let rType = rowStylesMap[rIdx];
 
-                // Warnai baris secara utuh berdasarkan tipe data programmatic-nya
                 if (rType === 'grand') {
-                    data.cell.styles.fillColor = [255, 215, 150]; // Soft Orange Grand Total
-                    data.cell.styles.fontStyle = 'bold';
-                    data.cell.styles.textColor = [160, 50, 0];
-                } 
-                else if (rType === 'wilayah') {
-                    data.cell.styles.fillColor = [165, 220, 215]; // Teal Muda Wilayah
-                    data.cell.styles.fontStyle = 'bold';
-                    data.cell.styles.textColor = [0, 60, 70];
-                } 
-                else if (rType === 'unit') {
-                    data.cell.styles.fillColor = [235, 238, 240]; // Gray Soft Unit Kerja
-                    data.cell.styles.fontStyle = 'bold';
+                    doc.setFillColor(255, 215, 150); data.cell.styles.fillColor = [255, 215, 150]; data.cell.styles.fontStyle = 'bold'; data.cell.styles.textColor = [160, 50, 0];
+                } else if (rType === 'wilayah') {
+                    doc.setFillColor(165, 220, 215); data.cell.styles.fillColor = [165, 220, 215]; data.cell.styles.fontStyle = 'bold'; data.cell.styles.textColor = [0, 60, 70];
+                } else if (rType === 'unit') {
+                    doc.setFillColor(235, 238, 240); data.cell.styles.fillColor = [235, 238, 240]; data.cell.styles.fontStyle = 'bold';
                 }
 
-                // Warnai tulisan status badge di kolom status (indeks 4)
-                if (rType === 'detail' && data.column.index === 4) {
-                    let statusTxt = rowStylesMap[rIndex + '_status'] || '';
-                    if (statusTxt.includes('Sesuai')) {
-                        data.cell.styles.textColor = [30, 130, 50];
-                        data.cell.styles.fontStyle = 'bold';
-                    } else {
-                        data.cell.styles.textColor = [190, 30, 40];
+                if (rType === 'detail') {
+                    if(data.column.index === 4) {
+                        let sTxt = rowStylesMap[rIdx + '_status'] || '';
+                        if(sTxt.includes('Sesuai')) data.cell.styles.textColor = [30, 130, 50];
+                        else if(sTxt.includes('Dropped')) data.cell.styles.textColor = [198, 40, 40];
+                        else data.cell.styles.textColor = [183, 129, 3];
+                    }
+                    if(data.column.index === 5) {
+                        let pTxt = rowStylesMap[rIdx + '_pstatus'] || '';
+                        if(pTxt.includes('Aktif') && !pTxt.includes('Non')) data.cell.styles.textColor = [46, 125, 50];
+                        else data.cell.styles.textColor = [117, 117, 117];
                         data.cell.styles.fontStyle = 'bold';
                     }
                 }
             },
-            didDrawPage: function (data) {
-                doc.lastTableY = data.cursor.y;
-            }
+            didDrawPage: function (data) { doc.lastTableY = data.cursor.y; }
         });
 
         // ---------------------------------------------------------------------
-        // 4. OTENTIKASI & KONSOLIDASI MULTI-WILAYAH (100% VALID)
+        // SINKRONISASI LOGIKA KOTAK OTENTIKASI & KONSOLIDASI MULTI-WILAYAH
         // ---------------------------------------------------------------------
         const selectedWilDropdown = document.getElementById('filter-summary-wilayah').value.trim().toUpperCase();
         
@@ -747,7 +1090,6 @@
         let lockStatus = "NOT LOCKED / UNVERIFIED";
         let lockTime = "-";
         let isLocked = false;
-        
         let isAllRegionsMode = (selectedWilDropdown === 'ALL');
         let totalLockedRegions = 0;
 
@@ -804,61 +1146,41 @@
             currentY = 20;
         }
 
-        doc.setDrawColor(0, 102, 119); 
-        doc.setLineWidth(0.8);
-        doc.setFillColor(245, 250, 250); 
+        doc.setDrawColor(0, 102, 119); doc.setLineWidth(0.8); doc.setFillColor(245, 250, 250); 
         doc.rect(15, currentY, 180, 52, 'FD');
 
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(11);
-        doc.setTextColor(0, 77, 90); 
+        doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(0, 77, 90); 
         doc.text("OTENTIKASI & VALIDASI DATA", 22, currentY + 9);
 
-        doc.setDrawColor(0, 102, 119);
-        doc.setLineWidth(0.4);
-        doc.line(22, currentY + 13, 185, currentY + 13);
-
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
-        doc.setTextColor(50, 50, 50);
+        doc.setDrawColor(0, 102, 119); doc.setLineWidth(0.4); doc.line(22, currentY + 13, 185, currentY + 13);
+        doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(50, 50, 50);
 
         if (isAllRegionsMode) {
             doc.text(`Status Dokumen  : `, 22, currentY + 20);
-            doc.setFont("helvetica", "bold");
-            doc.setTextColor(0, 102, 119); 
+            doc.setFont("helvetica", "bold"); doc.setTextColor(0, 102, 119); 
             doc.text(`${lockStatus}`, 55, currentY + 20);
             
-            doc.setFont("helvetica", "normal");
-            doc.setTextColor(50, 50, 50);
+            doc.setFont("helvetica", "normal"); doc.setTextColor(50, 50, 50);
             doc.text(`Informasi Log    :  ${lockNama}`, 22, currentY + 26);
             doc.text(`Fungsi Engine    :  ${lockJabatan}`, 22, currentY + 32);
             doc.text(`Keterangan Data  : `, 22, currentY + 38);
-            doc.setFont("helvetica", "bold");
-            doc.text(`Mencakup Keseluruhan data dari 17 Kantor Wilayah BNI`, 55, currentY + 38);
+            doc.setFont("helvetica", "bold"); doc.text(`Mencakup Keseluruhan data dari 17 Kantor Wilayah BNI`, 55, currentY + 38);
             
-            doc.setFont("helvetica", "oblique");
-            doc.setFontSize(9.5);
-            doc.setTextColor(229, 114, 0); 
+            doc.setFont("helvetica", "oblique"); doc.setFontSize(9.5); doc.setTextColor(229, 114, 0); 
             doc.text(`Progress Validasi: Sebanyak ${totalLockedRegions} dari 17 Kantor Wilayah telah resmi tervalidasi & dikunci.`, 22, currentY + 46);
         } else {
             doc.text(`Status Dokumen  : `, 22, currentY + 20);
             doc.setFont("helvetica", "bold");
-            if (isLocked) {
-                doc.setTextColor(40, 167, 69); 
-            } else {
-                doc.setTextColor(220, 53, 69); 
-            }
+            if (isLocked) doc.setTextColor(40, 167, 69); 
+            else doc.setTextColor(220, 53, 69); 
             doc.text(`${lockStatus}`, 55, currentY + 20);
             
-            doc.setFont("helvetica", "normal");
-            doc.setTextColor(50, 50, 50);
+            doc.setFont("helvetica", "normal"); doc.setTextColor(50, 50, 50);
             doc.text(`Nama Validator   :  ${lockNama}`, 22, currentY + 26);
             doc.text(`NPP / Jabatan     :  ${lockNpp} / ${lockJabatan}`, 22, currentY + 32);
             doc.text(`Wilayah Kerja     :  Wilayah ${lockWilayah}`, 22, currentY + 38);
             
-            doc.setFont("helvetica", "oblique");
-            doc.setFontSize(9);
-            doc.setTextColor(110, 110, 110);
+            doc.setFont("helvetica", "oblique"); doc.setFontSize(9); doc.setTextColor(110, 110, 110);
             doc.text(isLocked ? `Validasi resmi terkunci pada: ${lockTime} WIB` : `Sistem mencatat wilayah ini belum melakukan validasi / kunci data.`, 22, currentY + 46);
         }
 
