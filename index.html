@@ -345,161 +345,204 @@
     }
 
     async function loadPortalDashboardMetrics() {
-        try {
-            const response = await fetch(`${API_URL_BASE}?action=get_data`);
-            const result = await response.json();
-            
-            document.getElementById('portal-loading').style.display = 'none';
-            
-            const projects = result.projects || [];
-            const lockedWilayah = result.lockedWilayah || {};
-            const financialSummary = result.financialSummary || {};
+    try {
+        const response = await fetch(`${API_URL_BASE}?action=get_data`);
+        if (!response.ok) throw new Error("Respons jaringan tidak sukses.");
+        
+        const result = await response.json();
+        
+        // --- PROSES DAN RENDER METRIK PER WILAYAH ---
+        document.getElementById('portal-loading').style.display = 'none';
+        
+        const projects = result.projects || [];
+        const lockedWilayah = result.lockedWilayah || {};
+        const financialSummary = result.financialSummary || {};
+        const confirmedDetails = result.confirmedDetails || {}; // Mengambil data konfirmasi proyek
 
-            let regionMetrics = {};
-            projects.forEach(p => {
-                if (!p.Wilayah || p.Wilayah === "-") return;
-                const cleanProjNum = p.Project_Number ? p.Project_Number.toString().trim() : "";
-                if (cleanProjNum === "" || cleanProjNum === "0") return;
-
-                if (!regionMetrics[p.Wilayah]) {
-                    regionMetrics[p.Wilayah] = { total: 0, confirmed: 0 };
-                }
-                regionMetrics[p.Wilayah].total++;
-                if (p.IsConfirmedState === true) {
-                    regionMetrics[p.Wilayah].confirmed++;
-                }
-            });
-
-            const container = document.getElementById('region-progress-container');
-            container.innerHTML = '';
-
-            let rawListData = Object.keys(regionMetrics).map(reg => {
-                const metric = regionMetrics[reg];
-                const pct = metric.total > 0 ? Math.round((metric.confirmed / metric.total) * 100) : 0;
-                return { name: reg, pct: pct, total: metric.total, confirmed: metric.confirmed };
-            });
-
-            // --- MANAJEMEN URUTAN DATA (SORTING) ---
-            // 1. Salinan Data Khusus untuk Grafik Chart (Urutan Progress Tertinggi/Ranking)
-            let chartData = [...rawListData];
-            chartData.sort((a, b) => b.pct - a.pct || a.name.localeCompare(b.name));
-
-            // 2. Data Utama Diurutkan Ascending Berdasarkan Kode Wilayah (A-Z / W01-W18) untuk Grid Box
-            rawListData.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
-
-            if (rawListData.length === 0) {
-                container.innerHTML = `<div class="loading" style="color:#aaa;">Tidak ada data wilayah terdistribusi.</div>`;
-                return;
+        let regionMetrics = {};
+        
+        // Inisialisasi awal untuk semua wilayah yang ada di projects agar tidak terlewat
+        projects.forEach(p => {
+            if (!p.Wilayah || p.Wilayah === "-") return;
+            const regKey = p.Wilayah.toString().trim().toUpperCase();
+            if (!regionMetrics[regKey]) {
+                regionMetrics[regKey] = { total: 0, confirmed: 0, calcTotalEnp: 0, calcTotalRbb: 0 };
             }
+        });
 
-            // Update Chart Data Menggunakan chartData yang Terurut Berdasarkan Progress
-            if (myChartInstance) {
-                myChartInstance.data.labels = chartData.map(item => item.name);
-                myChartInstance.data.datasets[0].data = chartData.map(item => item.pct);
-                myChartInstance.data.datasets[0].backgroundColor = chartData.map(item => item.pct === 100 ? '#2e7d32' : '#006677');
-                myChartInstance.update();
+        // 1. Hitung progres proyek
+        projects.forEach(p => {
+            if (!p.Wilayah || p.Wilayah === "-") return;
+            const cleanProjNum = p.Project_Number ? p.Project_Number.toString().trim() : "";
+            if (cleanProjNum === "" || cleanProjNum === "0") return;
+
+            const regKey = p.Wilayah.toString().trim().toUpperCase();
+            regionMetrics[regKey].total++;
+            
+            if (p.IsConfirmedState === true) {
+                regionMetrics[regKey].confirmed++;
             }
+        });
 
-            // Render ke Grid Box Menggunakan rawListData yang Terurut Berdasarkan Nama Wilayah (Ascending)
-            rawListData.forEach(item => {
-                const regKey = item.name.toString().trim().toUpperCase();
-                const finData = financialSummary[regKey] ? financialSummary[regKey] : { enpAwal: 0, totalEnp: 0, totalRbb: 0, totalDrop: 0 };
-                
-                // Pemicu Status BELUM MENGISI: Jika usul penyesuaian ENP DAN usul alokasi RBB masih senilai 0
-                const isTotalZero = (Number(finData.totalEnp) === 0 && Number(finData.totalRbb) === 0);
-                const dropCount = finData.totalDrop || 0;
-                
-                const rawLock = lockedWilayah[regKey];
-                
-                // Cek status lock secara menyeluruh (string/object)
-                let isLocked = false;
-                if (rawLock) {
-                    if (typeof rawLock === 'string' && rawLock.trim().toUpperCase() === 'LOCKED') {
-                        isLocked = true;
-                    } else if (typeof rawLock === 'object') {
-                        const statusCheck = rawLock.Status || rawLock.status || '';
-                        if (statusCheck.toString().trim().toUpperCase() === 'LOCKED') {
-                            isLocked = true;
-                        }
+        // 2. Kalkulasi Penyesuaian ENP dan Alokasi RBB secara real-time berdasarkan log konfirmasi proyek
+        Object.keys(confirmedDetails).forEach(projNum => {
+            const detail = confirmedDetails[projNum];
+            if (detail && detail.operatingUnit) {
+                // Cari wilayah dari projects berdasarkan nomor proyek
+                const matchingProj = projects.find(p => (p.Project_Number ? p.Project_Number.toString().trim() : "") === projNum.toString().trim());
+                if (matchingProj && matchingProj.Wilayah) {
+                    const regKey = matchingProj.Wilayah.toString().trim().toUpperCase();
+                    if (regionMetrics[regKey]) {
+                        // Ambil nilai alokasiValue (Penyesuaian ENP) dan totalRealisasi (Alokasi RBB)
+                        regionMetrics[regKey].calcTotalEnp += Number(detail.alokasiValue) || 0;
+                        regionMetrics[regKey].calcTotalRbb += Number(detail.totalRealisasi) || 0;
                     }
                 }
+            }
+        });
 
-                const lockInfo = rawLock && typeof rawLock === 'object' ? rawLock : {};
-                const vNama = lockInfo.Nama_Validator || lockInfo.nama_validator || lockInfo["Nama Validator"] || lockInfo.nama || "-";
-                const vNpp = lockInfo.NPP || lockInfo.npp || "-";
-                const vJabatan = lockInfo.Jabatan || lockInfo.jabatan || "-";
-                const vWaktu = lockInfo.Timestamp || lockInfo.timestamp || lockInfo.waktu || "-";
-                
-                let statusBadge = "";
-                let validationClass = "status-open";
-                let validatorContentHTML = "";
+        const container = document.getElementById('region-progress-container');
+        container.innerHTML = '';
 
-                if (isLocked) {
-                    statusBadge = `<span class="badge-lock-status badge-locked">🔒 Lengkap</span>`;
-                    validationClass = "status-locked";
-                    validatorContentHTML = `
-                        <div class="v-row"><span class="v-label">Nama:</span><span class="v-value" title="${vNama}">${vNama}</span></div>
-                        <div class="v-row"><span class="v-label">NPP:</span><span class="v-value">${vNpp}</span></div>
-                        <div class="v-row"><span class="v-label">Jabatan:</span><span class="v-value" title="${vJabatan}">${vJabatan}</span></div>
-                        <div class="v-row"><span class="v-label">Waktu:</span><span class="v-value" style="font-size:10px; font-weight:normal;">${vWaktu}</span></div>
-                    `;
-                } else if (isTotalZero) {
-                    statusBadge = `<span class="badge-lock-status badge-empty">🔴 Belum Isi</span>`;
-                    validationClass = "status-empty";
-                    validatorContentHTML = `<div style="text-align:center; font-style:italic; padding:5px 0;">Database log masih kosong.</div>`;
-                } else {
-                    statusBadge = `<span class="badge-lock-status badge-unlocked">🔓 Belum Lengkap</span>`;
-                    validatorContentHTML = `<div style="text-align:center; font-style:italic; padding:5px 0; opacity:0.8;">Menunggu konfirmasi Dept Head.</div>`;
-                }
+        let rawListData = Object.keys(regionMetrics).map(reg => {
+            const metric = regionMetrics[reg];
+            const pct = metric.total > 0 ? Math.round((metric.confirmed / metric.total) * 100) : 0;
+            return { 
+                name: reg, 
+                pct: pct, 
+                total: metric.total, 
+                confirmed: metric.confirmed,
+                calcTotalEnp: metric.calcTotalEnp,
+                calcTotalRbb: metric.calcTotalRbb
+            };
+        });
 
-                const formatToJuta = (num) => {
-                    if (!num || isNaN(num)) return "Rp 0 Jt";
-                    const nilaiJuta = num / 1000000; 
-                    return `Rp ${new Intl.NumberFormat('id-ID', { maximumFractionDigits: 1 }).format(nilaiJuta)} Jt`;
-                };
+        // --- MANAJEMEN URUTAN DATA (SORTING) ---
+        // 1. Salinan Data Khusus untuk Grafik Chart (Urutan Progress Tertinggi/Ranking)
+        let chartData = [...rawListData];
+        chartData.sort((a, b) => b.pct - a.pct || a.name.localeCompare(b.name));
 
-                const card = document.createElement('div');
-                card.className = 'region-card';
-                card.innerHTML = `
-                    <div class="region-name">
-                        <span><strong>${item.name}</strong></span>
-                        ${statusBadge}
-                    </div>
-                    <div>
-                        <div class="progress-bar-bg">
-                            <div class="progress-bar-fill" style="width: ${item.pct}%"></div>
-                        </div>
-                        <div class="region-stats" style="margin-top: 5px; font-size:11px;">
-                            <span>Progres: <strong>${item.pct}%</strong></span>
-                            <span><strong>${item.confirmed}/${item.total}</strong> Proyek</span>
-                        </div>
-                        <div style="font-size: 11px; margin-top:2px; color: #b91c1c; text-align: right;">
-                             Proyek Di-drop: <strong>${dropCount}</strong>
-                        </div>
-                    </div>
-                    
-                    <div class="financial-info" style="font-size:11.5px;">
-                        <div class="fin-row"><span>ENP Awal:</span><strong>${formatToJuta(finData.enpAwal)}</strong></div>
-                        <div class="fin-row"><span>Penyesuaian ENP:</span><strong>${formatToJuta(finData.totalEnp)}</strong></div>
-                        <div class="fin-row"><span>Alokasi RBB:</span><strong>${formatToJuta(finData.totalRbb)}</strong></div>
-                    </div>
+        // 2. Data Utama Diurutkan Ascending Berdasarkan Kode Wilayah (A-Z / W01-W18) untuk Grid Box
+        rawListData.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
 
-                    <div style="font-size: 10.5px; font-weight: 700; color: var(--bni-teal-dark); margin-top: 5px; margin-bottom: -5px; letter-spacing:0.3px;">
-                        STATUS VALIDASI:
-                    </div>
-
-                    <div class="validation-info ${validationClass}">
-                        ${validatorContentHTML}
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-
-        } catch (e) {
-            document.getElementById('portal-loading').innerText = "Koneksi Sinkronisasi Gagal: " + e.message;
-            document.getElementById('portal-loading').style.color = "red";
+        if (rawListData.length === 0) {
+            container.innerHTML = `<div class="loading" style="color:#aaa;">Tidak ada data wilayah terdistribusi.</div>`;
+            return;
         }
+
+        // Update Chart Data Menggunakan chartData yang Terurut Berdasarkan Progress
+        if (myChartInstance) {
+            myChartInstance.data.labels = chartData.map(item => item.name);
+            myChartInstance.data.datasets[0].data = chartData.map(item => item.pct);
+            myChartInstance.data.datasets[0].backgroundColor = chartData.map(item => item.pct === 100 ? '#2e7d32' : '#006677');
+            myChartInstance.update();
+        }
+
+        // Render ke Grid Box Menggunakan rawListData yang Terurut Berdasarkan Nama Wilayah (Ascending)
+        rawListData.forEach(item => {
+            const regKey = item.name.toString().trim().toUpperCase();
+            const finData = financialSummary[regKey] ? financialSummary[regKey] : { enpAwal: 0, totalDrop: 0 };
+            
+            // Menggunakan nilai kalkulasi riil dari log konfirmasi
+            const penyesuaianEnp = item.calcTotalEnp;
+            const alokasiRbb = item.calcTotalRbb;
+            
+            // Pemicu Status BELUM MENGISI: Jika penyesuaian ENP DAN alokasi RBB hasil kalkulasi masih bernilai 0
+            const isTotalZero = (Number(penyesuaianEnp) === 0 && Number(alokasiRbb) === 0);
+            const dropCount = finData.totalDrop || 0;
+            
+            const rawLock = lockedWilayah[regKey];
+            
+            // Cek status lock secara menyeluruh (string/object)
+            let isLocked = false;
+            if (rawLock) {
+                if (typeof rawLock === 'string' && rawLock.trim().toUpperCase() === 'LOCKED') {
+                    isLocked = true;
+                } else if (typeof rawLock === 'object') {
+                    const statusCheck = rawLock.Status || rawLock.status || '';
+                    if (statusCheck.toString().trim().toUpperCase() === 'LOCKED') {
+                        isLocked = true;
+                    }
+                }
+            }
+
+            const lockInfo = rawLock && typeof rawLock === 'object' ? rawLock : {};
+            const vNama = lockInfo.Nama_Validator || lockInfo.nama_validator || lockInfo["Nama Validator"] || lockInfo.nama || "-";
+            const vNpp = lockInfo.NPP || lockInfo.npp || "-";
+            const vJabatan = lockInfo.Jabatan || lockInfo.jabatan || "-";
+            const vWaktu = lockInfo.Timestamp || lockInfo.timestamp || lockInfo.waktu || "-";
+            
+            let statusBadge = "";
+            let validationClass = "status-open";
+            let validatorContentHTML = "";
+
+            if (isLocked) {
+                statusBadge = `<span class="badge-lock-status badge-locked">🔒 Lengkap</span>`;
+                validationClass = "status-locked";
+                validatorContentHTML = `
+                    <div class="v-row"><span class="v-label">Nama:</span><span class="v-value" title="${vNama}">${vNama}</span></div>
+                    <div class="v-row"><span class="v-label">NPP:</span><span class="v-value">${vNpp}</span></div>
+                    <div class="v-row"><span class="v-label">Jabatan:</span><span class="v-value" title="${vJabatan}">${vJabatan}</span></div>
+                    <div class="v-row"><span class="v-label">Waktu:</span><span class="v-value" style="font-size:10px; font-weight:normal;">${vWaktu}</span></div>
+                `;
+            } else if (isTotalZero) {
+                statusBadge = `<span class="badge-lock-status badge-empty">🔴 Belum Isi</span>`;
+                validationClass = "status-empty";
+                validatorContentHTML = `<div style="text-align:center; font-style:italic; padding:5px 0;">Database log masih kosong.</div>`;
+            } else {
+                statusBadge = `<span class="badge-lock-status badge-unlocked">🔓 Belum Lengkap</span>`;
+                validatorContentHTML = `<div style="text-align:center; font-style:italic; padding:5px 0; opacity:0.8;">Menunggu konfirmasi Dept Head.</div>`;
+            }
+
+            const formatToJuta = (num) => {
+                if (!num || isNaN(num)) return "Rp 0 Jt";
+                const nilaiJuta = num / 1000000; 
+                return `Rp ${new Intl.NumberFormat('id-ID', { maximumFractionDigits: 1 }).format(nilaiJuta)} Jt`;
+            };
+
+            const card = document.createElement('div');
+            card.className = 'region-card';
+            card.innerHTML = `
+                <div class="region-name">
+                    <span><strong>${item.name}</strong></span>
+                    ${statusBadge}
+                </div>
+                <div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" style="width: ${item.pct}%"></div>
+                    </div>
+                    <div class="region-stats" style="margin-top: 5px; font-size:11px;">
+                        <span>Progres: <strong>${item.pct}%</strong></span>
+                        <span><strong>${item.confirmed}/${item.total}</strong> Proyek</span>
+                    </div>
+                    <div style="font-size: 11px; margin-top:2px; color: #b91c1c; text-align: right;">
+                         Proyek Di-drop: <strong>${dropCount}</strong>
+                    </div>
+                </div>
+                
+                <div class="financial-info" style="font-size:11.5px;">
+                    <div class="fin-row"><span>ENP Awal:</span><strong>${formatToJuta(finData.enpAwal)}</strong></div>
+                    <div class="fin-row"><span>Penyesuaian ENP:</span><strong>${formatToJuta(penyesuaianEnp)}</strong></div>
+                    <div class="fin-row"><span>Alokasi RBB:</span><strong>${formatToJuta(alokasiRbb)}</strong></div>
+                </div>
+
+                <div style="font-size: 10.5px; font-weight: 700; color: var(--bni-teal-dark); margin-top: 5px; margin-bottom: -5px; letter-spacing:0.3px;">
+                    STATUS VALIDASI:
+                </div>
+
+                <div class="validation-info ${validationClass}">
+                    ${validatorContentHTML}
+                </div>
+            `;
+            container.appendChild(card);
+        });
+
+    } catch (error) {
+        console.error("Gagal memuat metrik dashboard:", error);
+        document.getElementById('portal-loading').innerText = "❌ Gagal memuat data dashboard monitor.";
+        document.getElementById('portal-loading').style.color = "red";
     }
+}
 
     document.addEventListener('DOMContentLoaded', () => {
         setLiveDate();
