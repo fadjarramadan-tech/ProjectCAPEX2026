@@ -396,12 +396,25 @@
             globalConfirmedDetails = result.confirmedDetails || {};
             globalRejectedProjects = result.rejectedProjects || [];
             
-            globalLockedWilayah = {};
-            if (result.lockedWilayah) {
-                for (let key in result.lockedWilayah) {
-                    globalLockedWilayah[key.toString().trim().toUpperCase()] = result.lockedWilayah[key];
+            // PADA FUNGSI fetchData()
+        globalLockedWilayah = {};
+        if (result.lockedWilayah && Array.isArray(result.lockedWilayah)) {
+            // Karena backend mengirimkan Array, kita petakan berdasarkan properti Wilayah-nya
+            result.lockedWilayah.forEach(item => {
+                if (item && item.Wilayah) {
+                    const codeWilayah = item.Wilayah.toString().trim().toUpperCase();
+                    // Ambil status dari properti status atau Status
+                    globalLockedWilayah[codeWilayah] = (item.status || item.Status || "").toString().toUpperCase();
                 }
+            });
+        } else if (result.lockedWilayah) {
+            // Fallback jika berupa object map baku
+            for (let key in result.lockedWilayah) {
+                const item = result.lockedWilayah[key];
+                const codeWilayah = key.toString().trim().toUpperCase();
+                globalLockedWilayah[codeWilayah] = (item && (item.status || item.Status) ? (item.status || item.Status) : item).toString().toUpperCase();
             }
+        }
             
             currentFilteredList = [...globalProjects];
 
@@ -547,26 +560,31 @@
             let rowClass = item.IsConfirmedState === true ? 'confirmed' : '';
             const rowWilayahRaw = item.Wilayah ? item.Wilayah.toString().trim().toUpperCase() : "";
             
-            // Cek status kunci wilayah
+            // Pengecekan Kunci Wilayah yang Ringkas & Aman
             let isProjectLocked = false;
-            for (let lockedKey in globalLockedWilayah) {
-                const cleanLockKey = lockedKey.toString().trim().toUpperCase();
-                if (globalLockedWilayah[lockedKey] === "LOCKED" && cleanLockKey !== "") {
-                    if (rowWilayahRaw.includes(cleanLockKey) || cleanLockKey.includes(rowWilayahRaw)) {
-                        isProjectLocked = true;
-                        break;
+            if (globalLockedWilayah[rowWilayahRaw] === "LOCKED") {
+                isProjectLocked = true;
+            } else {
+                // Fallback pencocokan parsial string jika ada spasi tak sengaja
+                for (let lockedKey in globalLockedWilayah) {
+                    if (globalLockedWilayah[lockedKey] === "LOCKED" && lockedKey !== "") {
+                        if (rowWilayahRaw.includes(lockedKey) || lockedKey.includes(rowWilayahRaw)) {
+                            isProjectLocked = true;
+                            break;
+                        }
                     }
                 }
             }
 
-            // --- AMBIL DATA DINAMIS DARI HASIL INPUT MODAL ---
+            // AMBIL DATA DINAMIS DARI HASIL INPUT MODAL
             let rencanaRealisasi = "0";
-            let usulAlokasiRevisi = "0"; // Default langsung di-set ke 0 jika belum dikonfirmasi
+            let usulAlokasiRevisi = "0"; 
+// ... (Sisa kode renderTable ke bawah tetap sama seperti sebelumnya)
             
             if (globalConfirmedDetails[item.Project_Number]) {
                 const detail = globalConfirmedDetails[item.Project_Number];
                 rencanaRealisasi = detail.totalRealisasi || "0";
-                usulAlokasiRevisi = rencanaRealisasi; // Mengikuti rencana realisasi jika sudah konfirmasi
+                usulAlokasiRevisi = rencanaRealisasi; 
             }
             
             let actionHtml = '';
@@ -612,7 +630,7 @@
                 <td style="text-align: right; font-weight: 700; color: var(--bni-teal);">${formatRibuan(usulAlokasiRevisi)}</td>
                 <td style="text-align: right; font-weight: 700; color: var(--bni-orange);">${formatRibuan(rencanaRealisasi)}</td>
                 <td style="max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${item.Remarks}">${item.Remarks}</td>
-                <td>${actionHtml}</td>
+                <td style="text-align: center;">${actionHtml}</td>
             `;
             container.appendChild(tr);
         });
