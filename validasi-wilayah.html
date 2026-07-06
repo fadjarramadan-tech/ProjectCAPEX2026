@@ -12,6 +12,7 @@
             --bg-canvas: #f0f4f5;
             --text-dark: #222222;
             --success-green: #28a745;
+            --danger-red: #dc3545;
         }
         body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-canvas); padding: 25px; margin: 0; color: var(--text-dark); }
         .container { max-width: 1000px; margin: 0 auto; }
@@ -59,10 +60,11 @@
             <h3 style="margin-top:0; font-size:14px; text-transform:uppercase; color:var(--bni-orange);">Ringkasan Usulan Anggaran Revisi RBB 2026</h3>
             <div class="grid-summary">
                 <div class="summary-item"><span>Total Proyek Terkonfirmasi</span><strong id="lbl-total-proyek">0 Proyek</strong></div>
+                <div class="summary-item"><span>Total Project Di-Drop</span><strong id="lbl-total-drop" style="color: var(--danger-red);">0 Proyek</strong></div>
                 <div class="summary-item"><span>Total Plafon ENP Awal</span><strong id="lbl-enp-awal">Rp 0</strong></div>
                 <div class="summary-item"><span>Total Usul Penyesuaian ENP</span><strong id="lbl-enp-usulan">Rp 0</strong></div>
                 <div class="summary-item"><span>Total Usul Alokasi Revisi RBB</span><strong id="lbl-rbb-revisi" style="color:var(--bni-teal);">Rp 0</strong></div>
-                <div class="summary-item" style="grid-column: span 2;"><span>Total Keseluruhan Rencana Realisasi s.d Desember</span><strong id="lbl-realisasi-total" style="color:var(--success-green); font-size:18px;">Rp 0</strong></div>
+                <div class="summary-item"><span>Total Keseluruhan Rencana Realisasi s.d Desember</span><strong id="lbl-realisasi-total" style="color:var(--success-green); font-size:18px;">Rp 0</strong></div>
             </div>
         </div>
 
@@ -124,13 +126,17 @@
 
         let projects = rawServerResponse.projects || [];
         let details = rawServerResponse.confirmedDetails || {};
+        
+        // Ambil data olahan dari financialSummary bawaan server (dari LIST_PROJECT kolom F & REJECTED_PROJECT)
+        let finSummary = rawServerResponse.financialSummary || {};
+        let dataWilayahSvr = finSummary[selectedWilayah.toUpperCase()] || { enpAwal: 0, totalDrop: 0 };
 
-        let totalProyek = 0, enpAwal = 0, enpUsulan = 0, rbbRevisi = 0, realisasiTotal = 0;
+        let totalProyek = 0, enpAwal = dataWilayahSvr.enpAwal || 0, enpUsulan = 0, rbbRevisi = 0, realisasiTotal = 0;
+        let totalDrop = dataWilayahSvr.totalDrop || 0;
 
         projects.forEach(p => {
             if(p.Wilayah === selectedWilayah && p.IsConfirmedState) {
                 totalProyek++;
-                enpAwal += parseFloat(p.Alokasi_ENP || 0);
                 
                 let d = details[p.Project_Number];
                 if(d) {
@@ -142,6 +148,7 @@
         });
 
         document.getElementById('lbl-total-proyek').innerText = totalProyek + " Proyek";
+        document.getElementById('lbl-total-drop').innerText = totalDrop + " Proyek";
         document.getElementById('lbl-enp-awal').innerText = "Rp " + formatRibuan(enpAwal);
         document.getElementById('lbl-enp-usulan').innerText = "Rp " + formatRibuan(enpUsulan);
         document.getElementById('lbl-rbb-revisi').innerText = "Rp " + formatRibuan(rbbRevisi);
@@ -150,6 +157,7 @@
 
     function resetSummary() {
         document.getElementById('lbl-total-proyek').innerText = "0 Proyek";
+        document.getElementById('lbl-total-drop').innerText = "0 Proyek";
         document.getElementById('lbl-enp-awal').innerText = "Rp 0";
         document.getElementById('lbl-enp-usulan').innerText = "Rp 0";
         document.getElementById('lbl-rbb-revisi').innerText = "Rp 0";
